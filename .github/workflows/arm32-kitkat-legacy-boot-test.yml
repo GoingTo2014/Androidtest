@@ -90,8 +90,8 @@ jobs:
           IMAGE_DIR="$RUNNER_TEMP/kitkat-arm"
           LOG="$GITHUB_WORKSPACE/arm32-legacy-emulator.log"
           REPORT="$GITHUB_WORKSPACE/arm32-legacy-report.txt"
-          QT_LIB_DIRS="$(find "$TOOLS_DIR" -type f -name 'libQt5Widgets.so.5' -printf '%h\\n' | paste -sd: -)"
-          QT_PLUGIN_DIRS="$(find "$TOOLS_DIR" -type d -path '*/plugins/platforms' -printf '%h\\n' | paste -sd: -)"
+          QT_LIB_DIRS="$(find "$TOOLS_DIR" -type f -name 'libQt5Widgets.so.5' -printf '%h\n' | paste -sd: -)"
+          QT_PLUGIN_DIRS="$(find "$TOOLS_DIR" -type d -path '*/plugins/platforms' -printf '%h\n' | paste -sd: -)"
           export LD_LIBRARY_PATH="$QT_LIB_DIRS:$TOOLS_DIR/lib64:$TOOLS_DIR/lib:$TOOLS_DIR"
           export QT_PLUGIN_PATH="$QT_PLUGIN_DIRS"
           export QT_QPA_PLATFORM=offscreen
