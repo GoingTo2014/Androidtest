@@ -1,50 +1,52 @@
 # KitKat VM prototype
 
-This folder documents the Android 4.4 VM build. The APK is built from the open-source Limbo/QEMU emulator project as a separate app; the existing Androidtest antivirus demo remains untouched.
+This folder contains this repository's visible app customization and build-preparation code for an Android 4.4 virtual machine app.
+
+## Source layout
+
+- `app-src/com/limbo/emu/main/LimboEmuActivity.java` is the customized activity source. It disables KVM, stores logs in app-private storage, and implements the in-app Android-x86 ISO download menu.
+- `scripts/prepare-limbo-source.sh` copies that activity into the pinned Limbo checkout and applies the small app-name, CPU-limit, manifest, package-ID, and ABI-filter changes.
+- `../.github/workflows/build-kitkat-vm.yml` sets up dependencies, checks out Limbo, invokes the preparation script, builds QEMU and Gradle, and uploads the APK.
+
+The underlying emulator engine and much of the generic emulator UI remain from [Limbo](https://github.com/limboemu/limbo), pinned to commit [887c6a68cd6b414377d7f8071bc12bbc16e59809](https://github.com/limboemu/limbo/tree/887c6a68cd6b414377d7f8071bc12bbc16e59809). The customized activity and this project's own build changes are directly viewable here; they are no longer embedded as a long code block in the workflow.
 
 ## Target and safety
 
-- Targets modern **ARM64 Android tablets**, including Android 14 and newer. The upstream app's minimum SDK is 21; the build keeps its legacy target SDK to avoid introducing unrelated Android 14 behavior changes into this older codebase.
-- **No root is needed or used.** KVM is disabled both when QEMU is compiled and in the Android activity, so the app does not try to use `/dev/kvm`.
-- The VM is real PC emulation, not a simulated KitKat screen. The app can download the official Android-x86 4.4-r4 ISO in-app; the ISO itself is not bundled in the APK.
-- CPU count is configurable in the VM interface, capped at 4 virtual CPUs to help avoid accidental over-allocation. RAM, virtual disk, display, networking, and other machine options are configurable there too.
-- The workflow builds only the ARM64 host APK to reduce package size and gives it a unique package ID so it can coexist with the existing demo or a Limbo install. It is intended for ARM64 tablets, not Android-x86 phones/tablets.
+- Targets modern **ARM64 Android devices**. The build packages only the ARM64 host library and uses a unique application ID.
+- **No root is needed or used.** KVM is disabled both in the activity and in the native QEMU build.
+- This is real x86 PC emulation, not a simulated KitKat screen. The Android-x86 guest ISO is downloaded separately; it is not bundled in the APK.
+- The virtual CPU count is capped at four. RAM, virtual disk, display, networking, and other machine options are configured in Limbo's VM interface.
 
 ## Performance expectations
 
-Android-x86 4.4 runs as an x86 guest on an ARM64 tablet. QEMU has to translate guest CPU instructions in software, so performance depends heavily on the tablet and cannot be guaranteed to feel fast. The build uses optimized native libraries, enables QEMU's multi-threaded TCG option for 64-bit hosts, and limits the native build to two parallel build jobs to avoid excessive CI memory use. Runtime translation can still use substantial CPU while the VM is running.
+Android-x86 4.4 runs as an x86 guest on an ARM64 device. QEMU translates guest CPU instructions in software, so performance depends heavily on the device. For an initial setup, try **512–768 MB RAM and 1 virtual CPU**. More assigned RAM or CPUs do not automatically make a VM faster. Lower guest resolution and disabling guest sound may also reduce overhead.
 
-For an initial setup, try **512–768 MB RAM and 1 virtual CPU**. Test 2 virtual CPUs only if the tablet remains responsive. More RAM/CPUs do not automatically make a VM faster; assigning too much can slow down Android itself. Lower guest resolution and disabling guest sound may also reduce overhead.
+The legacy native build may require maintenance. GitHub Actions logs are the source of truth for whether a build succeeds; an APK has not yet been validated on a physical Android device.
 
-The first build uses upstream Limbo's existing VM configuration interface rather than reimplementing the emulation engine. The legacy native build may require maintenance. GitHub Actions logs are the source of truth for whether the build succeeds; an APK has not been validated on a physical Android 14 tablet yet.
-
-## Build an APK from your tablet
-
-Run the manual workflow from the repository's default branch (`main`):
+## Build an APK
 
 1. Open the repository's **Actions** tab.
-2. Select **Build KitKat VM (ARM64)** and choose **Run workflow**.
-3. Wait for the workflow to finish.
-4. Download the `kitkat-vm-arm64-debug-apk` artifact from the completed run and extract the APK.
-5. Install it on Android 14 or newer. Android may ask you to allow installs from your browser.
+2. Select **Build KitKat VM (ARM64)**, then choose **Run workflow**.
+3. If the run succeeds, download the `kitkat-vm-arm64-debug-apk` artifact.
+4. Extract the APK and install it on your ARM64 Android device. Android may ask you to allow installs from your browser.
 
-This workflow is manual only; ordinary commits will not trigger the VM build.
+The workflow is manual only; normal commits do not trigger a build.
 
-## Download the guest OS from the app
+## Download the guest OS
 
-After installing the APK, open the app's overflow menu and choose **Download KitKat ISO**. First choose between SourceForge and FossHub, both linked by the official Android-x86 4.4-r4 release notes. The app then displays the selected exact download-request URL, the official Android-x86 release-notes URL, and the release-published SHA-1 checksum. Confirm to download the approximately 451 MB file using Android's Download Manager; progress and completion are shown in Android notifications. The ISO is saved as `Downloads/android-x86-4.4-r4.iso`.
+In the app's overflow menu, select **Download KitKat ISO** and choose a source. SourceForge and FossHub are both listed by the official Android-x86 4.4-r4 release notes.
 
 - Official release notes: https://www.android-x86.org/releases/releasenote-4-4-r4.html
-- SourceForge download: https://sourceforge.net/projects/android-x86/files/Release%204.4/android-x86-4.4-r4.iso/download
-- FossHub alternative listed by the official release notes: https://www.fosshub.com/Android-x86.html/android-x86-4.4-r4.iso
+- SourceForge: https://sourceforge.net/projects/android-x86/files/Release%204.4/android-x86-4.4-r4.iso/download
+- FossHub: https://www.fosshub.com/Android-x86.html/android-x86-4.4-r4.iso
 - Published SHA-1: `2a33c508a632dd228928816a30fe44eff0da4728`
 
-Yes, SourceForge is an official listed download host, but it is not the only one: the official 4.4-r4 release notes also list FossHub. Both hosts may redirect to a delivery endpoint or mirror. The app displays the selected request URL before downloading. It does not automatically verify the downloaded file's checksum; compare it with the published SHA-1 above for an integrity check.
+The app shows the selected request URL and published checksum before downloading. The selected host may redirect to a delivery mirror, and the app does not automatically verify the downloaded file's checksum. Compare the downloaded ISO's SHA-1 with the published value for an integrity check.
 
-In the emulator, create a VM using the x86_64 machine, attach the ISO as its CD-ROM, create a virtual hard disk, then boot and install Android-x86 to that virtual disk. The first boot can take a long time. Some guest hardware, sound, networking, graphics acceleration, suspend/resume, and touch behavior may be limited.
+Create an x86_64 VM, attach the ISO as its CD-ROM, create a virtual hard disk, then boot and install Android-x86 onto that disk. First boot may take a while. Some guest hardware, audio, networking, graphics acceleration, suspend/resume, and touch behavior may be limited.
 
 ## Engine and licensing
 
-- Emulator engine: [Limbo (QEMU for Android)](https://github.com/limboemu/limbo), built from pinned upstream source.
-- Guest OS: [Android-x86 4.4-r4](https://www.android-x86.org/releases/releasenote-4-4-r4.html), offered through the in-app ISO downloader.
-- Limbo and QEMU have their own license and redistribution requirements. Review the upstream `COPYING` file before redistributing modified builds.
+- Emulator engine: [Limbo (QEMU for Android)](https://github.com/limboemu/limbo).
+- Guest OS: [Android-x86 4.4-r4](https://www.android-x86.org/releases/releasenote-4-4-r4.html).
+- Review the upstream Limbo and QEMU license files and redistribution requirements before sharing modified builds.
