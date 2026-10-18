@@ -8,7 +8,7 @@ This folder documents the Android 4.4 VM build. The APK is built from the open-s
 - **No root is needed or used.** KVM is disabled both when QEMU is compiled and in the Android activity, so the app does not try to use `/dev/kvm`.
 - The VM is real PC emulation, not a simulated KitKat screen. Users must download an Android-x86 4.4-r4 ISO themselves; it is not bundled in this APK.
 - CPU count is configurable in the VM interface, capped at 4 virtual CPUs to help avoid accidental over-allocation. RAM, virtual disk, display, networking, and other machine options are configurable there too.
-- The workflow builds only the ARM64 host APK to reduce package size. It is intended for ARM64 tablets, not Android-x86 phones/tablets.
+- The workflow builds only the ARM64 host APK to reduce package size and gives it a unique package ID so it can coexist with the existing demo or a Limbo install. It is intended for ARM64 tablets, not Android-x86 phones/tablets.
 
 ## Performance expectations
 
