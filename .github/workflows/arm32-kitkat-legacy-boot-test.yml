@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: arm32-kitkat-legacy-test
+  group: arm32-kitkat-legacy-test-bounded
   cancel-in-progress: false
 
 jobs:
