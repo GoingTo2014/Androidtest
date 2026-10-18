@@ -110,6 +110,7 @@ public class MainActivity extends Activity {
         else if ("History".equals(screen)) showHistory();
         else if ("Settings".equals(screen)) showSettings();
         else if ("Scan results".equals(screen)) showResults();
+        else if ("Scanning".equals(screen)) showScanning();
         else showHome();
 
         TextView footer = text("SIMULATED DATA ONLY · This app does not scan or protect your device.", 11, MUTED, false);
