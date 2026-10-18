@@ -81,6 +81,13 @@ jobs:
           test -s "$DEST/system.img"
           echo "IMAGE_INSPECTION_OK=true" | tee -a "$GITHUB_WORKSPACE/arm32-image-report.txt"
 
+      - name: Install emulator runtime libraries
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y libpulse0 libnss3 libxkbcommon0 libxcomposite1 libxcursor1 libxi6 libxtst6 libxrandr2 libasound2t64 || sudo apt-get install -y libpulse0 libnss3 libxkbcommon0 libxcomposite1 libxcursor1 libxi6 libxtst6 libxrandr2 libasound2
+
       - name: Create ARM32 KitKat AVD
         shell: bash
         run: |
