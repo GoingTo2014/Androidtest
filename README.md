@@ -1,38 +1,29 @@
-# KitKat Antivirus Demo
+# KitKat VM for Android
 
-A simulated antivirus interface inspired by Android 4.x Holo-style apps. Built with Java and native Android APIs. Minimum Android version: 4.4 (API 19). Designed to install on modern Android versions too.
+This repository now focuses on the **rootless Android 4.4 KitKat virtual machine app** for ARM64 Android tablets. The old antivirus demo has been removed from the current `main` branch.
 
-## Demo features
+## Where is the source code?
 
-- Classic Android Holo-style interface.
-- Dashboard with sample security status and demo statistics.
-- Animated simulated scan with progress and a fictional result.
-- Sample app list, example warning, quarantine screen, and scan history.
-- Demo-only settings switches and information dialogs.
-- All sample entries and results are fictional. The UI does not inspect the device.
+The app is built from the open-source [Limbo/QEMU Android app](https://github.com/limboemu/limbo/tree/887c6a68cd6b414377d7f8071bc12bbc16e59809/limbo-android-x86), pinned to a specific upstream commit. The build workflow downloads that source, applies the KitKat VM app changes, compiles QEMU, and packages the APK.
 
-## Important: this is not an antivirus
+- **Build script and custom app changes:** [`.github/workflows/build-kitkat-vm.yml`](.github/workflows/build-kitkat-vm.yml)
+- **VM setup, performance notes, ISO download and build instructions:** [`kitkat-vm/README.md`](kitkat-vm/README.md)
+- **Official Android-x86 KitKat 4.4-r4 release notes:** https://www.android-x86.org/releases/releasenote-4-4-r4.html
 
-This app is a UI demo only. It does **not** scan installed apps or files, calculate hashes, inspect permissions, quarantine files, provide real-time protection, send notifications, or run background scans. Buttons and settings only simulate an antivirus experience.
+The complete upstream emulator source is linked above; the customized source is currently prepared by the workflow at build time rather than stored as a complete standalone Limbo source tree in this repository.
 
-The Android manifest declares **no permissions**. The app has no account, analytics, internet access, or network calls. Demo settings are temporary and are not saved. Do not rely on this app to protect a device; keep Google Play Protect or another trusted security product enabled.
+## Build the APK
 
-## Build with GitHub Actions
+1. Open **Actions**.
+2. Select **Build KitKat VM (ARM64)**.
+3. Select **Run workflow**.
+4. Download and extract the `kitkat-vm-arm64-debug-apk` artifact after the run finishes.
 
-1. Open the repository's **Actions** tab.
-2. Select **Build Android Antivirus APK**.
-3. Click **Run workflow** and select `main`.
-4. Open the completed workflow run.
-5. Under **Artifacts**, download `kitkat-antivirus-debug-apk` and extract `app-debug.apk`.
+The workflow is manual only. The APK has not yet been confirmed to build successfully or tested on a physical tablet.
 
-The workflow uses Java 17, Android SDK Platform 35, and Gradle 8.7. No Gradle wrapper or signing secrets are required. The artifact is a debug APK for testing, not a Play Store release. The workflow is manually triggered; commits do not automatically build an APK.
+## Important limitations
 
-## Local build
-
-Install JDK 17, Android SDK Platform 35 / Build Tools 35.0.0, and Gradle 8.7, then run:
-
-```bash
-gradle --no-daemon assembleDebug
-```
-
-APK output: `app/build/outputs/apk/debug/app-debug.apk`.
+- No root is needed. KVM is disabled.
+- This is real x86 PC emulation on an ARM64 device, so it may be slow because guest CPU instructions are translated in software.
+- Download Android-x86 separately through the in-app ISO download option. The app displays the download URL and official release notes before starting.
+- The VM uses upstream Limbo/QEMU; review upstream licensing before redistributing builds.
