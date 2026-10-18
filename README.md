@@ -10,7 +10,7 @@ The app is built from the open-source [Limbo/QEMU Android app](https://github.co
 - **VM setup, performance notes, ISO download and build instructions:** [`kitkat-vm/README.md`](kitkat-vm/README.md)
 - **Official Android-x86 KitKat 4.4-r4 release notes:** https://www.android-x86.org/releases/releasenote-4-4-r4.html
 
-The complete upstream emulator source is linked above; the customized source is currently prepared by the workflow at build time rather than stored as a complete standalone Limbo source tree in this repository.
+The complete upstream emulator source is linked above; the customized source is currently prepared by the workflow at build time rather than stored as a complete standalone Limbo source tree in this repository. The VM app's activity source is [here](https://github.com/limboemu/limbo/blob/887c6a68cd6b414377d7f8071bc12bbc16e59809/limbo-android-x86/src/main/java/com/limbo/emu/main/LimboEmuActivity.java); this repository's custom downloader and build modifications are in the workflow.
 
 ## Build the APK
 
@@ -25,5 +25,5 @@ The workflow is manual only. The APK has not yet been confirmed to build success
 
 - No root is needed. KVM is disabled.
 - This is real x86 PC emulation on an ARM64 device, so it may be slow because guest CPU instructions are translated in software.
-- Download Android-x86 separately through the in-app ISO download option. The app displays the download URL and official release notes before starting.
+- Download Android-x86 through the in-app ISO download option. Choose SourceForge or FossHub; both are listed by the [official Android-x86 4.4-r4 release notes](https://www.android-x86.org/releases/releasenote-4-4-r4.html). The app displays the selected URL before starting.
 - The VM uses upstream Limbo/QEMU; review upstream licensing before redistributing builds.
