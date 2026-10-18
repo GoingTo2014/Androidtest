@@ -57,6 +57,18 @@ jobs:
           git config 'submodule.ui/keycodemapdb.url' https://github.com/qemu/keycodemapdb.git
           git config submodule.capstone.url https://github.com/qemu/capstone.git
           git submodule update --init --depth 1 dtc ui/keycodemapdb capstone
+          # QEMU 2.12 wrapped qemu/osdep.h in extern "C", which now pulls C++
+          # standard-library templates into C linkage on modern Linux/GLib.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("disas/arm-a64.cc")
+          s = p.read_text()
+          old = 'extern "C" {\n#include "qemu/osdep.h"\n#include "disas/bfd.h"\n}'
+          new = '#include "qemu/osdep.h"\nextern "C" {\n#include "disas/bfd.h"\n}'
+          if old not in s:
+              raise SystemExit("Expected legacy arm-a64 include block not found")
+          p.write_text(s.replace(old, new, 1))
+          PY
           cat QEMU_VERSION
           grep -n -E "ranchu\\.(o|c)" hw/arm/Makefile.objs || true
 
