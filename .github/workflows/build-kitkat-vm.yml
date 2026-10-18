@@ -162,10 +162,10 @@ jobs:
 
               private void promptKitKatIsoDownload() {
                   String message = "Downloads the official Android-x86 4.4-r4 ISO (about 451 MB)."
-                          + "\\n\\nDownload request URL:\\n" + KITKAT_ISO_URL
-                          + "\\n\\nOfficial release notes:\\n" + KITKAT_RELEASE_NOTES_URL
-                          + "\\n\\nSHA-1 published by the release notes:\\n" + KITKAT_ISO_SHA1
-                          + "\\n\\nSourceForge may redirect this request to one of its mirrors. "
+                          + "\n\nDownload request URL:\n" + KITKAT_ISO_URL
+                          + "\n\nOfficial release notes:\n" + KITKAT_RELEASE_NOTES_URL
+                          + "\n\nSHA-1 published by the release notes:\n" + KITKAT_ISO_SHA1
+                          + "\n\nSourceForge may redirect this request to one of its mirrors. "
                           + "The ISO will be saved as Downloads/" + KITKAT_ISO_FILE
                           + ". Mobile data charges may apply.";
                   new AlertDialog.Builder(this)
