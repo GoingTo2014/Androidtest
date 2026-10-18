@@ -1,29 +1,30 @@
 # KitKat VM for Android
 
-This repository now focuses on the **rootless Android 4.4 KitKat virtual machine app** for ARM64 Android tablets. The old antivirus demo has been removed from the current `main` branch.
+This repository builds a rootless Android 4.4 KitKat virtual machine app for ARM64 Android devices. The old antivirus demo has been removed from `main`.
 
-## Where is the source code?
+## Browse the source
 
-The app is built from the open-source [Limbo/QEMU Android app](https://github.com/limboemu/limbo/tree/887c6a68cd6b414377d7f8071bc12bbc16e59809/limbo-android-x86), pinned to a specific upstream commit. The build workflow downloads that source, applies the KitKat VM app changes, compiles QEMU, and packages the APK.
+The custom app code is stored in the repository instead of being embedded inside the GitHub Actions workflow:
 
-- **Build script and custom app changes:** [`.github/workflows/build-kitkat-vm.yml`](.github/workflows/build-kitkat-vm.yml)
-- **VM setup, performance notes, ISO download and build instructions:** [`kitkat-vm/README.md`](kitkat-vm/README.md)
-- **Official Android-x86 KitKat 4.4-r4 release notes:** https://www.android-x86.org/releases/releasenote-4-4-r4.html
+- **Customized Android activity:** [`LimboEmuActivity.java`](kitkat-vm/app-src/com/limbo/emu/main/LimboEmuActivity.java)
+- **Source preparation / packaging adjustments:** [`prepare-limbo-source.sh`](kitkat-vm/scripts/prepare-limbo-source.sh)
+- **Build workflow:** [`build-kitkat-vm.yml`](.github/workflows/build-kitkat-vm.yml)
+- **Build and usage notes:** [`kitkat-vm/README.md`](kitkat-vm/README.md)
 
-The complete upstream emulator source is linked above; the customized source is currently prepared by the workflow at build time rather than stored as a complete standalone Limbo source tree in this repository. The VM app's activity source is [here](https://github.com/limboemu/limbo/blob/887c6a68cd6b414377d7f8071bc12bbc16e59809/limbo-android-x86/src/main/java/com/limbo/emu/main/LimboEmuActivity.java); this repository's custom downloader and build modifications are in the workflow.
+The emulator engine and standard Limbo UI are based on the pinned [upstream Limbo Android source](https://github.com/limboemu/limbo/tree/887c6a68cd6b414377d7f8071bc12bbc16e59809/limbo-android-x86). The workflow checks out that exact upstream commit, copies in this repository's customized activity, applies the small packaging changes from the shell script, then builds the APK. This keeps the workflow focused on build steps while making our own app changes easy to browse and edit.
 
 ## Build the APK
 
 1. Open **Actions**.
 2. Select **Build KitKat VM (ARM64)**.
 3. Select **Run workflow**.
-4. Download and extract the `kitkat-vm-arm64-debug-apk` artifact after the run finishes.
+4. Download the `kitkat-vm-arm64-debug-apk` artifact if the run succeeds.
 
-The workflow is manual only. The APK has not yet been confirmed to build successfully or tested on a physical tablet.
+The workflow is manual only, so regular commits do not start a build. The APK has not yet been confirmed to build successfully or tested on a physical tablet.
 
-## Important limitations
+## Notes
 
-- No root is needed. KVM is disabled.
-- This is real x86 PC emulation on an ARM64 device, so it may be slow because guest CPU instructions are translated in software.
-- Download Android-x86 through the in-app ISO download option. Choose SourceForge or FossHub; both are listed by the [official Android-x86 4.4-r4 release notes](https://www.android-x86.org/releases/releasenote-4-4-r4.html). The app displays the selected URL before starting.
-- The VM uses upstream Limbo/QEMU; review upstream licensing before redistributing builds.
+- No root is needed; KVM is disabled.
+- Android-x86 4.4 runs as an x86 guest on an ARM64 device, so software CPU translation can be slow.
+- The in-app ISO downloader offers SourceForge and FossHub, both listed by the [official Android-x86 4.4-r4 release notes](https://www.android-x86.org/releases/releasenote-4-4-r4.html).
+- Review Limbo and QEMU licensing requirements before redistributing builds.
