@@ -19,11 +19,11 @@ jobs:
       - name: Check out Androidtest
         uses: actions/checkout@v4
 
-      - name: Set up Java 11
+      - name: Set up Java 17 for Android SDK tools
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '11'
+          java-version: '17'
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
@@ -99,6 +99,12 @@ jobs:
             USE_AAUDIO=false \
             USE_OPTIMIZATION=true \
             BUILD_THREADS=2
+
+      - name: Switch to Java 11 for legacy Gradle 6.7.1
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
 
       - name: Set up compatible Gradle
         uses: gradle/actions/setup-gradle@v4
