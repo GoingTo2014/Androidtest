@@ -20,7 +20,7 @@ The first build uses upstream Limbo's existing VM configuration interface rather
 
 ## Build an APK from your tablet
 
-First merge the pull request into the repository's default branch (`main`); GitHub only exposes the manual workflow trigger from the default branch. Then:
+Run the manual workflow from the repository's default branch (`main`):
 
 1. Open the repository's **Actions** tab.
 2. Select **Build KitKat VM (ARM64)** and choose **Run workflow**.
@@ -30,9 +30,15 @@ First merge the pull request into the repository's default branch (`main`); GitH
 
 This workflow is manual only; ordinary commits will not trigger the VM build.
 
-## Get the guest OS
+## Download the guest OS from the app
 
-Download the official [Android-x86 4.4-r4 release](https://www.android-x86.org/releases/releasenote-4-4-r4.html) on the tablet and keep the ISO in local storage.
+After installing the APK, open the app's overflow menu and choose **Download KitKat ISO**. Before downloading, the app displays the exact download-request URL, the official Android-x86 release-notes URL, and the release-published SHA-1 checksum. Confirm to download the approximately 451 MB file using Android's Download Manager; progress and completion are shown in Android notifications. The ISO is saved as `Downloads/android-x86-4.4-r4.iso`.
+
+- Official release notes: https://www.android-x86.org/releases/releasenote-4-4-r4.html
+- Download request URL: https://sourceforge.net/projects/android-x86/files/Release%204.4/android-x86-4.4-r4.iso/download
+- Published SHA-1: `2a33c508a632dd228928816a30fe44eff0da4728`
+
+The Android-x86 release notes identify the 4.4-r4 image; the project file is hosted through SourceForge. SourceForge can redirect requests to a mirror, so the app displays the exact URL it requests and notes that a mirror may serve the bytes. The current implementation does not automatically verify the downloaded file's checksum; compare it with the published SHA-1 above for an integrity check.
 
 In the emulator, create a VM using the x86_64 machine, attach the ISO as its CD-ROM, create a virtual hard disk, then boot and install Android-x86 to that virtual disk. The first boot can take a long time. Some guest hardware, sound, networking, graphics acceleration, suspend/resume, and touch behavior may be limited.
 
