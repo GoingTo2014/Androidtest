@@ -55,7 +55,7 @@ jobs:
           UNPACK="$RUNNER_TEMP/arm-image"
           DEST="$RUNNER_TEMP/kitkat-arm"
           curl --fail --location --retry 3 --retry-all-errors \
-            https://dl.google.com/android/repository/sys-img/google_apis/armeabi-v7a-19_r40.zip \
+            https://dl.google.com/android/repository/sys-img/android/armeabi-v7a-19_r05.zip \
             --output "$ZIP"
           mkdir -p "$UNPACK" "$DEST"
           unzip -oq "$ZIP" -d "$UNPACK"
