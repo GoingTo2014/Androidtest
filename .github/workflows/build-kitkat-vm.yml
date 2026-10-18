@@ -101,11 +101,13 @@ jobs:
           sed -i 's/public static final int MAX_CPU_NUM = 8;/public static final int MAX_CPU_NUM = 4;/' "$CONFIG"
           sed -i 's/android:label="Limbo x86 PC Emulator"/android:label="KitKat VM (Preview)"/' "$MANIFEST"
           sed -i 's/abiFilters "armeabi-v7a","arm64-v8a", "x86", "x86_64"/abiFilters "arm64-v8a"/' "$GRADLE"
+          sed -i 's/applicationId "com.limbo.emu.main"/applicationId "com.goingto2014.androidtest.kitkatvm"/' "$GRADLE"
 
           grep -q 'Config.enableKVM = false;' "$ACTIVITY"
           grep -q 'getFilesDir().getAbsolutePath() + "/limbo-x86-log.txt"' "$ACTIVITY"
           grep -q 'MAX_CPU_NUM = 4' "$CONFIG"
           grep -q 'abiFilters "arm64-v8a"' "$GRADLE"
+          grep -q 'applicationId "com.goingto2014.androidtest.kitkatvm"' "$GRADLE"
 
       - name: Build optimized ARM64 QEMU native libraries (KVM disabled)
         working-directory: ${{ runner.temp }}/limbo/limbo-android-lib/src/main/jni
