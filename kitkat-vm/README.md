@@ -32,13 +32,14 @@ This workflow is manual only; ordinary commits will not trigger the VM build.
 
 ## Download the guest OS from the app
 
-After installing the APK, open the app's overflow menu and choose **Download KitKat ISO**. Before downloading, the app displays the exact download-request URL, the official Android-x86 release-notes URL, and the release-published SHA-1 checksum. Confirm to download the approximately 451 MB file using Android's Download Manager; progress and completion are shown in Android notifications. The ISO is saved as `Downloads/android-x86-4.4-r4.iso`.
+After installing the APK, open the app's overflow menu and choose **Download KitKat ISO**. First choose between SourceForge and FossHub, both linked by the official Android-x86 4.4-r4 release notes. The app then displays the selected exact download-request URL, the official Android-x86 release-notes URL, and the release-published SHA-1 checksum. Confirm to download the approximately 451 MB file using Android's Download Manager; progress and completion are shown in Android notifications. The ISO is saved as `Downloads/android-x86-4.4-r4.iso`.
 
 - Official release notes: https://www.android-x86.org/releases/releasenote-4-4-r4.html
-- Download request URL: https://sourceforge.net/projects/android-x86/files/Release%204.4/android-x86-4.4-r4.iso/download
+- SourceForge download: https://sourceforge.net/projects/android-x86/files/Release%204.4/android-x86-4.4-r4.iso/download
+- FossHub alternative listed by the official release notes: https://www.fosshub.com/Android-x86.html/android-x86-4.4-r4.iso
 - Published SHA-1: `2a33c508a632dd228928816a30fe44eff0da4728`
 
-The Android-x86 release notes identify the 4.4-r4 image; the project file is hosted through SourceForge. SourceForge can redirect requests to a mirror, so the app displays the exact URL it requests and notes that a mirror may serve the bytes. The current implementation does not automatically verify the downloaded file's checksum; compare it with the published SHA-1 above for an integrity check.
+Yes, SourceForge is an official listed download host, but it is not the only one: the official 4.4-r4 release notes also list FossHub. Both hosts may redirect to a delivery endpoint or mirror. The app displays the selected request URL before downloading. It does not automatically verify the downloaded file's checksum; compare it with the published SHA-1 above for an integrity check.
 
 In the emulator, create a VM using the x86_64 machine, attach the ISO as its CD-ROM, create a virtual hard disk, then boot and install Android-x86 to that virtual disk. The first boot can take a long time. Some guest hardware, sound, networking, graphics acceleration, suspend/resume, and touch behavior may be limited.
 
