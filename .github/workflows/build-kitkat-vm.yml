@@ -1,0 +1,127 @@
+name: Build KitKat VM (ARM64)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kitkat-vm-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build QEMU-backed Android VM APK
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - name: Check out Androidtest
+        uses: actions/checkout@v4
+
+      - name: Set up Java 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK and NDK
+        run: |
+          sdkmanager --install \
+            'platform-tools' \
+            'platforms;android-29' \
+            'build-tools;29.0.3' \
+            'ndk;23.1.7779620'
+
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            autoconf automake bison build-essential curl flex gettext git \
+            libtool-bin make patch pkg-config python3 rsync texinfo wget xz-utils
+
+      - name: Check out pinned Limbo source
+        run: |
+          git clone https://github.com/limboemu/limbo.git "$RUNNER_TEMP/limbo"
+          cd "$RUNNER_TEMP/limbo"
+          git checkout 887c6a68cd6b414377d7f8071bc12bbc16e59809
+
+      - name: Download and patch QEMU dependencies
+        working-directory: ${{ runner.temp }}/limbo/limbo-android-lib/src/main/jni
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -fL https://download.qemu.org/qemu-5.1.0.tar.xz -o /tmp/qemu.tar.xz
+          tar -xJf /tmp/qemu.tar.xz
+          mv qemu-5.1.0 qemu
+
+          curl -fL https://ftp.gnome.org/pub/GNOME/sources/glib/2.56/glib-2.56.1.tar.xz -o /tmp/glib.tar.xz
+          tar -xJf /tmp/glib.tar.xz
+          mv glib-2.56.1 glib
+
+          curl -fL https://sourceware.org/pub/libffi/libffi-3.3.tar.gz -o /tmp/libffi.tar.gz
+          tar -xzf /tmp/libffi.tar.gz
+          mv libffi-3.3 libffi
+
+          curl -fL https://www.cairographics.org/releases/pixman-0.40.0.tar.gz -o /tmp/pixman.tar.gz
+          tar -xzf /tmp/pixman.tar.gz
+          mv pixman-0.40.0 pixman
+
+          curl -fL https://www.libsdl.org/release/SDL2-2.0.8.tar.gz -o /tmp/sdl2.tar.gz
+          tar -xzf /tmp/sdl2.tar.gz
+          mv SDL2-2.0.8 SDL2
+
+          patch -d qemu -p1 < patches/qemu-5.1.0.patch
+          patch -d glib -p1 < patches/glib-2.56.1.patch
+          patch -d SDL2 -p1 < patches/sdl2-2.0.8.patch
+
+      - name: Build optimized ARM64 QEMU native libraries (KVM disabled)
+        working-directory: ${{ runner.temp }}/limbo/limbo-android-lib/src/main/jni
+        env:
+          NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/23.1.7779620
+        run: |
+          make limbo \
+            NDK_ROOT="$NDK_ROOT" \
+            NDK_ENV=linux-x86_64 \
+            BUILD_HOST=arm64-v8a \
+            BUILD_GUEST=x86_64-softmmu \
+            USE_QEMU_VERSION=5.1.0 \
+            USE_GCC=false \
+            USE_KVM=false \
+            USE_AAUDIO=false \
+            USE_OPTIMIZATION=true \
+            BUILD_THREADS=2
+
+      - name: Set KitKat VM app label
+        working-directory: ${{ runner.temp }}/limbo
+        run: |
+          sed -i 's/android:label="Limbo x86 PC Emulator"/android:label="KitKat VM (Preview)"/' \
+            limbo-android-x86/src/main/AndroidManifest.xml
+
+      - name: Set up compatible Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '6.7.1'
+
+      - name: Build debug APK
+        working-directory: ${{ runner.temp }}/limbo
+        run: gradle --no-daemon :limbo-android-x86:assembleDebug
+
+      - name: Verify APK output
+        working-directory: ${{ runner.temp }}/limbo
+        run: |
+          APK='limbo-android-x86/build/outputs/apk/debug/limbo-android-x86-debug.apk'
+          test -s "$APK"
+          ls -lh "$APK"
+          unzip -l "$APK" | grep -E 'lib/arm64-v8a/libqemu-system-x86_64.so|AndroidManifest.xml'
+
+      - name: Upload KitKat VM APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: kitkat-vm-arm64-debug-apk
+          path: ${{ runner.temp }}/limbo/limbo-android-x86/build/outputs/apk/debug/limbo-android-x86-debug.apk
+          if-no-files-found: error
+          retention-days: 14
