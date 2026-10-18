@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: arm32-kitkat-legacy-test-generic
+  group: arm32-kitkat-legacy-test-no-pipe
   cancel-in-progress: false
 
 jobs:
@@ -117,8 +117,10 @@ jobs:
             -gpu off -verbose -show-kernel > "$LOG" 2>&1 &
           EMU_PID=$!
           BOOT_OK=false
-          for i in $(seq 1 60); do
-            if timeout 1s adb -e shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' | grep -q '^1$'; then
+          for i in $(seq 1 45); do
+            # Keep adb output on a file so its background server cannot hold a pipeline open.
+            timeout 2s adb -e shell getprop sys.boot_completed > "$RUNNER_TEMP/bootprop.txt" 2>&1 || true
+            if grep -q '^1' "$RUNNER_TEMP/bootprop.txt"; then
               BOOT_OK=true
               break
             fi
