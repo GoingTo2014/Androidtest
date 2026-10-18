@@ -27,6 +27,11 @@ jobs:
             bison flex libglib2.0-dev libpixman-1-dev libfdt-dev zlib1g-dev \
             libslirp-dev libcap-ng-dev libattr1-dev ninja-build
 
+      - name: Install Python 2.7 for the legacy QEMU configure scripts
+        uses: actions/setup-python@v5
+        with:
+          python-version: '2.7'
+
       - name: Fetch Android QEMU 2.12 source
         shell: bash
         run: |
@@ -49,6 +54,7 @@ jobs:
           mkdir -p build-arm32
           cd build-arm32
           ../configure \
+            --python=python \
             --target-list=arm-softmmu \
             --disable-werror \
             --disable-gtk \
