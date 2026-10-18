@@ -26,21 +26,21 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
-        getWindow().setTitle("Android 4.4 UI Showcase");
+        getWindow().setTitle("Android 2.3 UI Showcase");
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(16), dp(12), dp(16), dp(28));
-        root.setBackgroundColor(Color.rgb(250, 250, 250));
+        root.setPadding(dp(12), dp(10), dp(12), dp(24));
+        root.setBackgroundColor(Color.rgb(16, 16, 16));
         scroll.addView(root);
         setContentView(scroll);
 
         TextView title = new TextView(this);
-        title.setText("Android 4.4 UI Showcase");
+        title.setText("Android 2.3 UI Showcase");
         title.setTextSize(25);
         title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        title.setTextColor(Color.rgb(40, 40, 40));
+        title.setTextColor(Color.rgb(245, 245, 245));
         root.addView(title, matchWrap());
         TextView subtitle = text("Interactive examples of classic Android widgets. Tap and experiment with everything.");
         subtitle.setTextSize(14);
@@ -48,7 +48,7 @@ public class MainActivity extends Activity {
         root.addView(subtitle);
 
         status = text("Status: Ready");
-        status.setTextColor(Color.rgb(0, 110, 150));
+        status.setTextColor(Color.rgb(153, 220, 70));
         status.setPadding(dp(10), dp(10), dp(10), dp(10));
         status.setBackground(panel());
         root.addView(status, matchWrap());
@@ -330,7 +330,7 @@ public class MainActivity extends Activity {
         styled.setTextSize(18); styled.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         styled.setPadding(0, dp(10), 0, dp(10)); root.addView(styled, matchWrap());
 
-        addButton("Show Toast", v -> Toast.makeText(this, "Hello from Android 4.4 style!", Toast.LENGTH_LONG).show());
+        addButton("Show Toast", v -> Toast.makeText(this, "Hello from Android 2.3 style!", Toast.LENGTH_LONG).show());
         addButton("Copy sample text", v -> {
             if (android.os.Build.VERSION.SDK_INT >= 11) {
                 android.content.ClipboardManager cb = (android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
@@ -383,12 +383,12 @@ public class MainActivity extends Activity {
         root.addView(text("Device: " + android.os.Build.DEVICE), matchWrap());
         root.addView(text("Model: " + android.os.Build.MODEL), matchWrap());
         root.addView(text("App minimum API: 19 (Android 4.4 KitKat)"), matchWrap());
-        root.addView(text("Theme: native Android Holo Light"), matchWrap());
+        root.addView(text("Theme: classic dark Android style"), matchWrap());
         addButton("Show app information", v -> new AlertDialog.Builder(this)
             .setTitle("About this showcase")
-            .setMessage("A widget playground inspired by Android 4.4 KitKat. Most controls are native Android views. Media playback and notifications are represented as demos; no data is sent anywhere.")
+            .setMessage("A widget playground inspired by Android 2.3 Gingerbread. Most controls are native Android views. Media playback and notifications are represented as demos; no data is sent anywhere.")
             .setPositiveButton("Close", null).show());
-        TextView footer = text("Android 4.4 UI Showcase • Offline demo • No account required");
+        TextView footer = text("Android 2.3 UI Showcase • Offline demo • No account required");
         footer.setGravity(Gravity.CENTER);
         footer.setPadding(0, dp(20), 0, dp(4));
         root.addView(footer, matchWrap());
@@ -400,11 +400,11 @@ public class MainActivity extends Activity {
         heading.setText(name.toUpperCase(Locale.getDefault()));
         heading.setTextSize(14);
         heading.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        heading.setTextColor(Color.rgb(0, 125, 170));
+        heading.setTextColor(Color.rgb(153, 220, 70));
         heading.setPadding(0, dp(24), 0, dp(8));
         root.addView(heading, matchWrap());
         View line = new View(this);
-        line.setBackgroundColor(Color.rgb(210, 210, 210));
+        line.setBackgroundColor(Color.rgb(65, 65, 65));
         root.addView(line, new LinearLayout.LayoutParams(-1, dp(1)));
     }
 
@@ -412,7 +412,7 @@ public class MainActivity extends Activity {
         Button b = new Button(this); b.setText(label); b.setOnClickListener(listener); root.addView(b, matchWrap());
     }
     private TextView text(String value) {
-        TextView t = new TextView(this); t.setText(value); t.setTextColor(Color.rgb(45, 45, 45)); t.setTextSize(15); t.setPadding(0, dp(5), 0, dp(5)); return t;
+        TextView t = new TextView(this); t.setText(value); t.setTextColor(Color.rgb(230, 230, 230)); t.setTextSize(15); t.setPadding(0, dp(5), 0, dp(5)); return t;
     }
     private void toast(String value) { Toast.makeText(this, value, Toast.LENGTH_SHORT).show(); }
     private int dp(float value) { return (int)(value * getResources().getDisplayMetrics().density + 0.5f); }
@@ -420,6 +420,6 @@ public class MainActivity extends Activity {
     private LinearLayout.LayoutParams wrapWrap() { return new LinearLayout.LayoutParams(-2, -2); }
     private GradientDrawable panel() {
         GradientDrawable d = new GradientDrawable();
-        d.setColor(Color.rgb(255,255,255)); d.setStroke(dp(1), Color.rgb(215,215,215)); d.setCornerRadius(dp(3)); return d;
+        d.setColor(Color.rgb(35,35,35)); d.setStroke(dp(1), Color.rgb(80,80,80)); d.setCornerRadius(dp(2)); return d;
     }
 }
