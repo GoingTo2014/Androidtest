@@ -117,8 +117,8 @@ jobs:
             -gpu off -verbose -show-kernel > "$LOG" 2>&1 &
           EMU_PID=$!
           BOOT_OK=false
-          for i in $(seq 1 240); do
-            if adb -e shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' | grep -q '^1$'; then
+          for i in $(seq 1 90); do
+            if timeout 2s adb -e shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' | grep -q '^1$'; then
               BOOT_OK=true
               break
             fi
