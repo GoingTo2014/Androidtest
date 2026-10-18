@@ -1,0 +1,154 @@
+name: QEMU2 ARM32 Ranchu compatibility probe
+
+on:
+  push:
+    branches:
+      - poc/qemu2-arm32-ranchu
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qemu2-arm32-ranchu-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    name: Build ARM QEMU and test KitKat kernel
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - name: Install small set of QEMU build dependencies
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y build-essential git pkg-config python3 python3-venv \
+            bison flex libglib2.0-dev libpixman-1-dev libfdt-dev zlib1g-dev \
+            libslirp-dev libcap-ng-dev libattr1-dev ninja-build
+
+      - name: Fetch Android QEMU 2.12 source
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 --branch emu-master-dev --recurse-submodules \
+            https://github.com/mirror/qemu-android.git "$RUNNER_TEMP/qemu-android"
+          cd "$RUNNER_TEMP/qemu-android"
+          cat QEMU_VERSION
+          grep -n "ranchu.c" hw/arm/Makefile.objs
+
+      - name: Build only the 32-bit ARM system emulator
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd "$RUNNER_TEMP/qemu-android"
+          mkdir -p build-arm32
+          cd build-arm32
+          ../configure \
+            --target-list=arm-softmmu \
+            --disable-werror \
+            --disable-gtk \
+            --disable-sdl \
+            --disable-opengl \
+            --disable-kvm \
+            --disable-xen \
+            --disable-vnc \
+            --disable-curses \
+            --disable-docs \
+            --disable-tools \
+            --disable-guest-agent \
+            --disable-cap-ng \
+            --disable-seccomp \
+            --disable-usb-redir \
+            --disable-spice \
+            --disable-libnfs \
+            --disable-libiscsi \
+            --disable-glusterfs
+          make -j2 qemu-system-arm
+          ./qemu-system-arm --version | tee "$GITHUB_WORKSPACE/qemu2-arm32-report.txt"
+          ./qemu-system-arm -machine help | tee -a "$GITHUB_WORKSPACE/qemu2-arm32-report.txt"
+          if ./qemu-system-arm -machine help | grep -q '^ranchu '; then
+            echo "RANCHU_MACHINE_PRESENT=true" | tee -a "$GITHUB_WORKSPACE/qemu2-arm32-report.txt"
+          else
+            echo "RANCHU_MACHINE_PRESENT=false" | tee -a "$GITHUB_WORKSPACE/qemu2-arm32-report.txt"
+          fi
+
+      - name: Extract only the ARM32 KitKat guest components
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ZIP="$RUNNER_TEMP/armeabi-v7a-19_r40.zip"
+          DEST="$RUNNER_TEMP/kitkat-arm"
+          mkdir -p "$DEST"
+          curl --fail --location --retry 3 --retry-all-errors \
+            https://dl.google.com/android/repository/sys-img/google_apis/armeabi-v7a-19_r40.zip \
+            --output "$ZIP"
+          for name in kernel-qemu kernel-ranchu ramdisk.img system.img build.prop; do
+            unzip -p "$ZIP" "armeabi-v7a/$name" > "$DEST/$name"
+            test -s "$DEST/$name"
+          done
+          rm -f "$ZIP"
+          file "$DEST/kernel-qemu" "$DEST/kernel-ranchu" "$DEST/system.img" \
+            | tee -a "$GITHUB_WORKSPACE/qemu2-arm32-report.txt"
+          du -h "$DEST"/* | tee -a "$GITHUB_WORKSPACE/qemu2-arm32-report.txt"
+          echo "USERDATA_TEMPLATE_EXCLUDED=true" | tee -a "$GITHUB_WORKSPACE/qemu2-arm32-report.txt"
+
+      - name: Prepare compact writable data disk
+        shell: bash
+        run: |
+          set -euxo pipefail
+          truncate -s 384M "$RUNNER_TEMP/kitkat-arm/userdata.img"
+          mke2fs -q -t ext4 -F "$RUNNER_TEMP/kitkat-arm/userdata.img"
+          ls -lh "$RUNNER_TEMP/kitkat-arm/userdata.img" | tee -a "$GITHUB_WORKSPACE/qemu2-arm32-report.txt"
+
+      - name: Start ARM32 guest with Ranchu board
+        shell: bash
+        run: |
+          set -uo pipefail
+          QEMU="$RUNNER_TEMP/qemu-android/build-arm32/qemu-system-arm"
+          GUEST="$RUNNER_TEMP/kitkat-arm"
+          LOG="$GITHUB_WORKSPACE/qemu2-arm32-boot.log"
+          REPORT="$GITHUB_WORKSPACE/qemu2-arm32-report.txt"
+          echo "=== QEMU boot attempt ===" | tee -a "$REPORT"
+          set +e
+          timeout --signal=TERM --kill-after=5s 90s "$QEMU" \
+            -machine ranchu \
+            -cpu cortex-a15 \
+            -m 768 -smp 1 \
+            -kernel "$GUEST/kernel-ranchu" \
+            -initrd "$GUEST/ramdisk.img" \
+            -drive if=none,id=system,format=raw,file="$GUEST/system.img",readonly=on \
+            -device virtio-blk-device,drive=system \
+            -drive if=none,id=data,format=raw,file="$GUEST/userdata.img" \
+            -device virtio-blk-device,drive=data \
+            -append "console=ttyAMA0 earlyprintk androidboot.hardware=ranchu androidboot.selinux=permissive qemu=1" \
+            -display none -serial stdio -monitor none -no-reboot \
+            > "$LOG" 2>&1
+          CODE=$?
+          set -e
+          echo "QEMU_EXIT_CODE=$CODE" | tee -a "$REPORT"
+          tail -n 240 "$LOG" | tee -a "$REPORT" || true
+          if grep -Eqi "Kernel panic|unable to mount root|not a valid machine|unsupported machine|Error:" "$LOG"; then
+            echo "BOOT_DIAGNOSTICS_CONTAIN_ERROR=true" | tee -a "$REPORT"
+          fi
+          if grep -Eqi "init: starting|init: cannot find|Welcome to Android|Android.*starting|goldfish" "$LOG"; then
+            echo "ANDROID_GUEST_ACTIVITY_SEEN=true" | tee -a "$REPORT"
+          fi
+          if [ "$CODE" -eq 124 ]; then
+            echo "QEMU_RAN_FOR_90_SECONDS=true" | tee -a "$REPORT"
+            exit 0
+          fi
+          if [ "$CODE" -ne 0 ]; then
+            exit "$CODE"
+          fi
+
+      - name: Upload only compact diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qemu2-arm32-ranchu-diagnostics
+          path: |
+            qemu2-arm32-report.txt
+            qemu2-arm32-boot.log
+          if-no-files-found: warn
+          retention-days: 7
