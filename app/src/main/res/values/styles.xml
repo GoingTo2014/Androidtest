@@ -1,7 +1,10 @@
 <resources>
-    <style name="AppTheme" parent="android:style/Theme.Holo.Light">
-        <item name="android:colorAccent">#33B5E5</item>
-        <item name="android:windowActionModeOverlay">true</item>
-        <item name="android:fontFamily">sans</item>
+    <!-- Classic dark theme inspired by Android 2.3 Gingerbread. Theme.Black is available
+         on old Android versions and keeps the base widgets compatible with modern Android. -->
+    <style name="AppTheme" parent="android:style/Theme.Black">
+        <item name="android:windowBackground">#101010</item>
+        <item name="android:colorBackground">#101010</item>
+        <item name="android:textColorPrimary">#F0F0F0</item>
+        <item name="android:textColorSecondary">#BDBDBD</item>
     </style>
 </resources>
