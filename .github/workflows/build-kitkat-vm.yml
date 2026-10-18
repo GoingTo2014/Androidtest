@@ -143,6 +143,8 @@ jobs:
               private static final String KITKAT_ISO_URL_FOSSHUB = "https://www.fosshub.com/Android-x86.html/android-x86-4.4-r4.iso";
               private static final String KITKAT_RELEASE_NOTES_URL = "https://www.android-x86.org/releases/releasenote-4-4-r4.html";
               private static final String KITKAT_ISO_SHA1 = "2a33c508a632dd228928816a30fe44eff0da4728";
+              private String pendingKitKatIsoUrl = KITKAT_ISO_URL_SOURCEFORGE;
+              private String pendingKitKatIsoSourceName = "SourceForge (project download site)";
 
               @Override
               public boolean onPrepareOptionsMenu(Menu menu) {
@@ -198,6 +200,8 @@ jobs:
               }
 
               private void requestKitKatIsoStoragePermission(final String sourceUrl, final String sourceName) {
+                  pendingKitKatIsoUrl = sourceUrl;
+                  pendingKitKatIsoSourceName = sourceName;
                   if (Build.VERSION.SDK_INT >= 23
                           && checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                           != PackageManager.PERMISSION_GRANTED) {
@@ -213,7 +217,7 @@ jobs:
                   super.onRequestPermissionsResult(requestCode, permissions, grantResults);
                   if (requestCode == REQUEST_KITKAT_ISO_STORAGE) {
                       if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                          enqueueKitKatIsoDownload(KITKAT_ISO_URL_SOURCEFORGE, "SourceForge (project download site)");
+                          enqueueKitKatIsoDownload(pendingKitKatIsoUrl, pendingKitKatIsoSourceName);
                       } else {
                           Toast.makeText(this, "Storage permission is required to save the ISO in Downloads.",
                                   Toast.LENGTH_LONG).show();
