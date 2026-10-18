@@ -31,9 +31,13 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          git clone --depth 1 --branch emu-master-dev --recurse-submodules \
+          git clone --depth 1 --branch emu-master-dev \
             https://github.com/mirror/qemu-android.git "$RUNNER_TEMP/qemu-android"
           cd "$RUNNER_TEMP/qemu-android"
+          # Only initialize the two source submodules used by this ARM system build.
+          git config submodule.dtc.url https://github.com/qemu/dtc.git
+          git config submodule.ui/keycodemapdb.url https://github.com/qemu/keycodemapdb.git
+          git submodule update --init --depth 1 dtc ui/keycodemapdb
           cat QEMU_VERSION
           grep -n "ranchu.c" hw/arm/Makefile.objs
 
