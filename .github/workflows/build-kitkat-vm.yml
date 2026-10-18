@@ -78,10 +78,42 @@ jobs:
           patch -d glib -p1 < patches/glib-2.56.1.patch
           patch -d SDL2 -p1 < patches/sdl2-2.0.8.patch
 
+      - name: Apply Android 14 and no-root adjustments
+        working-directory: ${{ runner.temp }}/limbo
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ACTIVITY='limbo-android-x86/src/main/java/com/limbo/emu/main/LimboEmuActivity.java'
+          CONFIG='limbo-android-lib/src/main/java/com/max2idea/android/limbo/main/Config.java'
+          MANIFEST='limbo-android-x86/src/main/AndroidManifest.xml'
+          GRADLE='limbo-android-x86/build.gradle'
+
+          # The native QEMU build also disables KVM. Force the app UI/runtime off it.
+          sed -i 's/Config.enableKVM = true;/Config.enableKVM = false;/' "$ACTIVITY"
+
+          # Keep logs in the app-private directory instead of a legacy root-level path.
+          sed -i 's|Logger.setupLogFile("/limbo/limbo-x86-log.txt");|Logger.setupLogFile(getFilesDir().getAbsolutePath() + "/limbo-x86-log.txt");|' "$ACTIVITY"
+
+          # Give the app a distinct name, cap vCPUs to avoid accidental over-allocation,
+          # and package only the ARM64 host library to reduce APK size.
+          sed -i 's/public static final String APP_NAME = "Limbo Emulator";/public static final String APP_NAME = "KitKat VM (Preview)";/' "$CONFIG"
+          sed -i 's/public static final int MAX_CPU_NUM = 8;/public static final int MAX_CPU_NUM = 4;/' "$CONFIG"
+          sed -i 's/android:label="Limbo x86 PC Emulator"/android:label="KitKat VM (Preview)"/' "$MANIFEST"
+          sed -i 's/abiFilters "armeabi-v7a","arm64-v8a", "x86", "x86_64"/abiFilters "arm64-v8a"/' "$GRADLE"
+
+          grep -q 'Config.enableKVM = false;' "$ACTIVITY"
+          grep -q 'getFilesDir().getAbsolutePath() + "/limbo-x86-log.txt"' "$ACTIVITY"
+          grep -q 'MAX_CPU_NUM = 4' "$CONFIG"
+          grep -q 'abiFilters "arm64-v8a"' "$GRADLE"
+
       - name: Build optimized ARM64 QEMU native libraries (KVM disabled)
         working-directory: ${{ runner.temp }}/limbo/limbo-android-lib/src/main/jni
+        shell: bash
         run: |
+          set -euxo pipefail
           NDK_ROOT="$ANDROID_HOME/ndk/23.1.7779620"
+          export NDK_MODULE_PATH="$NDK_ROOT/sources/"
           make limbo \
             NDK_ROOT="$NDK_ROOT" \
             NDK_ENV=linux-x86_64 \
@@ -93,12 +125,6 @@ jobs:
             USE_AAUDIO=false \
             USE_OPTIMIZATION=true \
             BUILD_THREADS=2
-
-      - name: Set KitKat VM app label
-        working-directory: ${{ runner.temp }}/limbo
-        run: |
-          sed -i 's/android:label="Limbo x86 PC Emulator"/android:label="KitKat VM (Preview)"/' \
-            limbo-android-x86/src/main/AndroidManifest.xml
 
       - name: Set up compatible Gradle
         uses: gradle/actions/setup-gradle@v4
