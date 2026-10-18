@@ -103,6 +103,8 @@ jobs:
           echo "Disk usage:" | tee -a "$REPORT"
           du -sh "$IMAGE_DIR" | tee -a "$REPORT"
           "$TOOLS_DIR/emulator64-arm" \
+            -sysdir "$IMAGE_DIR" \
+            -datadir "$IMAGE_DIR" \
             -kernel "$IMAGE_DIR/kernel-qemu" \
             -system "$IMAGE_DIR/system.img" \
             -ramdisk "$IMAGE_DIR/ramdisk.img" \
