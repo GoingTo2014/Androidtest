@@ -72,6 +72,20 @@ jobs:
           cat QEMU_VERSION
           grep -n -E "ranchu\\.(o|c)" hw/arm/Makefile.objs || true
 
+      - name: Fetch minimal Android Goldfish pipe headers
+        shell: bash
+        run: |
+          set -euxo pipefail
+          INCLUDE_DIR="$RUNNER_TEMP/aemu-host-common/host-common"
+          mkdir -p "$INCLUDE_DIR"
+          BASE="https://raw.githubusercontent.com/msft-mirror-aosp/platform.hardware.google.aemu/3c1ced8a369417db591eb7cd083af5bb2c317975/host-common/include/host-common"
+          curl --fail --location --retry 3 --retry-all-errors "$BASE/goldfish_pipe.h" -o "$INCLUDE_DIR/goldfish_pipe.h"
+          curl --fail --location --retry 3 --retry-all-errors "$BASE/android_pipe_base.h" -o "$INCLUDE_DIR/android_pipe_base.h"
+          test -s "$INCLUDE_DIR/goldfish_pipe.h"
+          test -s "$INCLUDE_DIR/android_pipe_base.h"
+          sha256sum "$INCLUDE_DIR"/*.h
+
+
       - name: Build only the 32-bit ARM system emulator
         shell: bash
         run: |
@@ -81,6 +95,7 @@ jobs:
           cd build-arm32
           ../configure \
             --python=python \
+            --extra-cflags="-I$RUNNER_TEMP/aemu-host-common" \
             --target-list=arm-softmmu \
             --disable-werror \
             --disable-gtk \
