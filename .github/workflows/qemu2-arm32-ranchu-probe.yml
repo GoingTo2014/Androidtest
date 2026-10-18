@@ -36,10 +36,10 @@ jobs:
           cd "$RUNNER_TEMP/qemu-android"
           # Only initialize the two source submodules used by this ARM system build.
           git config submodule.dtc.url https://github.com/qemu/dtc.git
-          git config submodule.ui/keycodemapdb.url https://github.com/qemu/keycodemapdb.git
-          git submodule update --init --depth 1 dtc ui/keycodemapdb
+          git config 'submodule.ui/keycodemapdb.url' https://github.com/qemu/keycodemapdb.git
+          git -c url.https://github.com/qemu/keycodemapdb.git.insteadOf=git://git.qemu.org/keycodemapdb.git submodule update --init --depth 1 dtc ui/keycodemapdb
           cat QEMU_VERSION
-          grep -n "ranchu.c" hw/arm/Makefile.objs
+          grep -n -E "ranchu\\.(o|c)" hw/arm/Makefile.objs || true
 
       - name: Build only the 32-bit ARM system emulator
         shell: bash
