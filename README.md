@@ -1,21 +1,21 @@
-# KitKat Antivirus
+# KitKat Antivirus Demo
 
-An offline Android utility with a classic Android 4.x Holo-style interface. Built with Java and native Android APIs, minimum Android 4.4 (API 19), and designed to install on modern Android versions.
+A simulated antivirus interface inspired by Android 4.x Holo-style apps. Built with Java and native Android APIs. Minimum Android version: 4.4 (API 19). Designed to install on modern Android versions too.
 
-## Current features
+## Demo features
 
-- Native classic Android interface.
-- Lets the user choose one APK file through Android's file picker.
-- Calculates the selected file's SHA-256 hash locally.
-- No installed-app enumeration or inspection of other apps' permissions.
-- No INTERNET permission, account, analytics, or network calls.
-- GitHub Actions builds a debug APK only when manually triggered.
+- Classic Android Holo-style interface.
+- Dashboard with sample security status and demo statistics.
+- Animated simulated scan with progress and a fictional result.
+- Sample app list, example warning, quarantine screen, and scan history.
+- Demo-only settings switches and information dialogs.
+- All sample entries and results are fictional. The UI does not inspect the device.
 
-## Important limitations
+## Important: this is not an antivirus
 
-This test build is an offline APK hash utility, not a malware scanner and not a replacement for Google Play Protect. It does not compare hashes against a malware database or determine whether an APK is safe. A hash is only an identifier for file contents.
+This app is a UI demo only. It does **not** scan installed apps or files, calculate hashes, inspect permissions, quarantine files, provide real-time protection, send notifications, or run background scans. Buttons and settings only simulate an antivirus experience.
 
-The app does not request broad package visibility and does not scan installed apps. Android may still show warnings based on the APK's signing identity, reputation, target SDK, or other signals. Removing package scanning cannot guarantee that Play Protect will stop warning about the app.
+The Android manifest declares **no permissions**. The app has no account, analytics, internet access, or network calls. Demo settings are temporary and are not saved. Do not rely on this app to protect a device; keep Google Play Protect or another trusted security product enabled.
 
 ## Build with GitHub Actions
 
@@ -25,7 +25,7 @@ The app does not request broad package visibility and does not scan installed ap
 4. Open the completed workflow run.
 5. Under **Artifacts**, download `kitkat-antivirus-debug-apk` and extract `app-debug.apk`.
 
-The workflow uses Java 17, Android SDK Platform 35, and Gradle 8.7. No Gradle wrapper or signing secrets are required. The artifact is a debug APK for testing, not a Play Store release.
+The workflow uses Java 17, Android SDK Platform 35, and Gradle 8.7. No Gradle wrapper or signing secrets are required. The artifact is a debug APK for testing, not a Play Store release. The workflow is manually triggered; commits do not automatically build an APK.
 
 ## Local build
 
