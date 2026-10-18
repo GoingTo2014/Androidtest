@@ -90,9 +90,16 @@ jobs:
           IMAGE_DIR="$RUNNER_TEMP/kitkat-arm"
           LOG="$GITHUB_WORKSPACE/arm32-legacy-emulator.log"
           REPORT="$GITHUB_WORKSPACE/arm32-legacy-report.txt"
-          export LD_LIBRARY_PATH="$TOOLS_DIR/lib64:$TOOLS_DIR/lib:$TOOLS_DIR"
+          QT_LIB_DIRS="$(find "$TOOLS_DIR" -type f -name 'libQt5Widgets.so.5' -printf '%h\\n' | paste -sd: -)"
+          QT_PLUGIN_DIRS="$(find "$TOOLS_DIR" -type d -path '*/plugins/platforms' -printf '%h\\n' | paste -sd: -)"
+          export LD_LIBRARY_PATH="$QT_LIB_DIRS:$TOOLS_DIR/lib64:$TOOLS_DIR/lib:$TOOLS_DIR"
+          export QT_PLUGIN_PATH="$QT_PLUGIN_DIRS"
+          export QT_QPA_PLATFORM=offscreen
           echo "Legacy engine:" > "$REPORT"
           file "$TOOLS_DIR/emulator64-arm" | tee -a "$REPORT"
+          echo "Qt library directories: $QT_LIB_DIRS" | tee -a "$REPORT"
+          echo "Qt plugin directories: $QT_PLUGIN_DIRS" | tee -a "$REPORT"
+          ldd "$TOOLS_DIR/emulator64-arm" | tee -a "$REPORT" || true
           echo "Disk usage:" | tee -a "$REPORT"
           du -sh "$IMAGE_DIR" | tee -a "$REPORT"
           "$TOOLS_DIR/emulator64-arm" \
