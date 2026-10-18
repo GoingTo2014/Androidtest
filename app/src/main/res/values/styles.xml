@@ -1,6 +1,0 @@
-<resources>
-    <!-- Native Holo theme preserves the classic Android 4.x appearance on API 19+. -->
-    <style name="AppTheme" parent="android:style/Theme.Holo.Light">
-        <item name="android:windowBackground">#F5F5F5</item>
-    </style>
-</resources>
