@@ -2,6 +2,10 @@ name: Build KitKat VM (ARM64)
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-kitkat-vm.yml'
 
 permissions:
   contents: read
@@ -40,7 +44,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            autoconf automake bison build-essential curl flex gettext git \
+            autoconf automake bison build-essential curl flex gettext git gtk-doc-tools \
             libtool-bin make patch pkg-config python3 rsync texinfo wget xz-utils
 
       - name: Check out pinned Limbo source
