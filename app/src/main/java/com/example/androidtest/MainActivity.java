@@ -14,6 +14,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.*;
+import android.webkit.WebView;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
