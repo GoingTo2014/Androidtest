@@ -1,6 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application android:theme="@style/AppTheme" android:label="Android 4.4 UI Showcase" android:allowBackup="false" android:supportsRtl="true">
-        <activity android:name=".MainActivity" android:label="UI Showcase" android:exported="true">
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+    <application
+        android:theme="@style/AppTheme"
+        android:label="KitKat Antivirus"
+        android:allowBackup="false"
+        android:supportsRtl="true">
+        <activity
+            android:name=".MainActivity"
+            android:label="KitKat Antivirus"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

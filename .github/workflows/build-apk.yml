@@ -1,15 +1,7 @@
-name: Build Android APK
+name: Build Android Antivirus APK
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
-    paths:
-      - 'app/**'
-      - '*.gradle'
-      - 'gradle.properties'
-      - 'settings.gradle'
-      - '.github/workflows/build-apk.yml'
 
 permissions:
   contents: read
@@ -40,7 +32,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: androidtest-debug-apk
+          name: kitkat-antivirus-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14

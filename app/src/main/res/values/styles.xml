@@ -1,10 +1,9 @@
 <resources>
-    <!-- Classic dark theme inspired by Android 2.3 Gingerbread. Theme.Black is available
-         on old Android versions and keeps the base widgets compatible with modern Android. -->
-    <style name="AppTheme" parent="android:style/Theme.Black">
-        <item name="android:windowBackground">#101010</item>
-        <item name="android:colorBackground">#101010</item>
-        <item name="android:textColorPrimary">#F0F0F0</item>
-        <item name="android:textColorSecondary">#BDBDBD</item>
+    <!-- Native Holo theme keeps the classic Android 4.x appearance. -->
+    <style name="AppTheme" parent="android:style/Theme.Holo.Light">
+        <item name="android:windowBackground">#F5F5F5</item>
+        <item name="android:colorAccent">#009688</item>
+        <item name="android:colorControlActivated">#009688</item>
+        <item name="android:fontFamily">sans</item>
     </style>
 </resources>

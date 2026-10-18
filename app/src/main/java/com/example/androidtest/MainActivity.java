@@ -2,424 +2,413 @@ package com.example.androidtest;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.DatePickerDialog;
-import android.app.TimePickerDialog;
+import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.net.Uri;
 import android.os.Bundle;
-import android.content.Context;
 import android.view.Gravity;
 import android.view.View;
-import android.view.ViewGroup;
-import android.view.inputmethod.InputMethodManager;
-import android.widget.*;
-import android.webkit.WebView;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.ScrollView;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import java.io.InputStream;
+import java.io.FileInputStream;
+import java.io.File;
+import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends Activity {
+    private static final int REQUEST_PICK_APK = 41;
+    private static final int BG = Color.rgb(245, 245, 245);
+    private static final int INK = Color.rgb(33, 33, 33);
+    private static final int TEAL = Color.rgb(0, 150, 136);
+    private static final int RED = Color.rgb(198, 40, 40);
+    private static final int ORANGE = Color.rgb(239, 108, 0);
+
+    // Add verified SHA-256 hashes of confirmed malware here as the local signature
+    // database is maintained. Never label an app malware from a guess alone.
+    private static final Set<String> KNOWN_BAD_SHA256;
+    static {
+        Set<String> hashes = new HashSet<String>();
+        KNOWN_BAD_SHA256 = Collections.unmodifiableSet(hashes);
+    }
+
+    private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private LinearLayout root;
-    private TextView status;
-    private int sectionCount = 0;
+    private TextView overallStatus;
+    private TextView countText;
+    private TextView detailText;
+    private ProgressBar progress;
+    private Button scanButton;
+    private Button apkButton;
+    private final List<ScanResult> lastResults = new ArrayList<ScanResult>();
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
-        getWindow().setTitle("Android 2.3 UI Showcase");
+        getWindow().setStatusBarColor(Color.rgb(0, 121, 107));
+        getWindow().setNavigationBarColor(Color.rgb(0, 77, 64));
+        getWindow().setTitle("KitKat Antivirus");
+        buildInterface();
+    }
+
+    private void buildInterface() {
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
+        scroll.setBackgroundColor(BG);
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(12), dp(10), dp(12), dp(24));
-        root.setBackgroundColor(Color.rgb(16, 16, 16));
+        root.setPadding(dp(16), dp(14), dp(16), dp(24));
         scroll.addView(root);
         setContentView(scroll);
 
-        TextView title = new TextView(this);
-        title.setText("Android 2.3 UI Showcase");
-        title.setTextSize(25);
-        title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        title.setTextColor(Color.rgb(245, 245, 245));
-        root.addView(title, matchWrap());
-        TextView subtitle = text("Interactive examples of classic Android widgets. Tap and experiment with everything.");
-        subtitle.setTextSize(14);
-        subtitle.setPadding(0, dp(5), 0, dp(12));
-        root.addView(subtitle);
+        TextView title = text("KitKat Antivirus", 25, INK, true);
+        root.addView(title, match());
+        TextView subtitle = text("Offline protection • No account • No internet access", 13, Color.DKGRAY, false);
+        subtitle.setPadding(0, dp(3), 0, dp(16));
+        root.addView(subtitle, match());
 
-        status = text("Status: Ready");
-        status.setTextColor(Color.rgb(153, 220, 70));
-        status.setPadding(dp(10), dp(10), dp(10), dp(10));
-        status.setBackground(panel());
-        root.addView(status, matchWrap());
+        LinearLayout shield = new LinearLayout(this);
+        shield.setGravity(Gravity.CENTER);
+        shield.setOrientation(LinearLayout.VERTICAL);
+        shield.setPadding(dp(14), dp(22), dp(14), dp(22));
+        shield.setBackground(panel(Color.WHITE, TEAL));
+        TextView symbol = text("✓", 44, TEAL, true);
+        symbol.setGravity(Gravity.CENTER);
+        shield.addView(symbol, match());
+        overallStatus = text("Your device is ready to scan", 18, INK, true);
+        overallStatus.setGravity(Gravity.CENTER);
+        overallStatus.setPadding(0, dp(6), 0, dp(4));
+        shield.addView(overallStatus, match());
+        detailText = text("No scan has been run yet.", 13, Color.DKGRAY, false);
+        detailText.setGravity(Gravity.CENTER);
+        shield.addView(detailText, match());
+        root.addView(shield, match());
 
-        basicInputs();
-        selectionControls();
-        progressAndRating();
-        dialogsAndPickers();
-        listsAndLayouts();
-        displayAndUtilities();
-        mediaAndWeb();
-        systemInfo();
-    }
+        countText = text("Installed apps: not scanned", 14, INK, false);
+        countText.setPadding(0, dp(14), 0, dp(8));
+        root.addView(countText, match());
 
-    private void basicInputs() {
-        section("Text and buttons");
-        final EditText name = new EditText(this);
-        name.setSingleLine(true);
-        name.setHint("Text field — enter your name");
-        root.addView(name, matchWrap());
+        progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        progress.setIndeterminate(false);
+        progress.setMax(100);
+        progress.setProgress(0);
+        root.addView(progress, match());
 
-        final EditText email = new EditText(this);
-        email.setSingleLine(true);
-        email.setHint("Email address");
-        email.setInputType( android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
-        root.addView(email, matchWrap());
+        scanButton = button("SCAN INSTALLED APPS");
+        scanButton.setOnClickListener(v -> scanInstalledApps());
+        root.addView(scanButton, match());
 
-        final EditText password = new EditText(this);
-        password.setSingleLine(true);
-        password.setHint("Password field");
-        password.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        root.addView(password, matchWrap());
+        apkButton = button("CHECK AN APK FILE");
+        apkButton.setOnClickListener(v -> pickApk());
+        root.addView(apkButton, match());
 
-        final EditText multiline = new EditText(this);
-        multiline.setHint("Multiline text box");
-        multiline.setGravity(Gravity.TOP | Gravity.LEFT);
-        multiline.setMinLines(3);
-        multiline.setMaxLines(5);
-        root.addView(multiline, matchWrap());
+        addSection("SCAN RESULTS");
+        addButton("View latest results", v -> showResults());
+        addButton("What does this scanner check?", v -> showAboutDetection());
+        addButton("About KitKat Antivirus", v -> new AlertDialog.Builder(this)
+            .setTitle("About")
+            .setMessage("KitKat Antivirus is an offline security prototype. It checks accessible installed-app metadata, selected permission combinations, and SHA-256 hashes against a local signature list. It does not upload data or replace Google Play Protect.")
+            .setPositiveButton("OK", null).show());
 
-        Button normal = new Button(this);
-        normal.setText("Classic button");
-        normal.setOnClickListener(v -> toast("Button tapped"));
-        root.addView(normal, matchWrap());
-
-        Button submit = new Button(this);
-        submit.setText("Read text fields");
-        submit.setOnClickListener(v -> {
-            String value = name.getText().toString().trim();
-            status.setText("Name: " + (value.length() == 0 ? "(empty)" : value)
-                + "\nEmail: " + email.getText().toString()
-                + "\nPassword characters: " + password.length()
-                + "\nNotes characters: " + multiline.length());
-            ((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE))
-                .hideSoftInputFromWindow(submit.getWindowToken(), 0);
-        });
-        root.addView(submit, matchWrap());
-
-        ToggleButton toggle = new ToggleButton(this);
-        toggle.setTextOn("Toggle: ON");
-        toggle.setTextOff("Toggle: OFF");
-        toggle.setChecked(false);
-        toggle.setOnCheckedChangeListener((b, checked) -> toast("Toggle is " + (checked ? "ON" : "OFF")));
-        root.addView(toggle, wrapWrap());
-    }
-
-    private void selectionControls() {
-        section("Checkboxes, radio buttons and dropdowns");
-        CheckBox check = new CheckBox(this);
-        check.setText("Checkbox example");
-        check.setOnCheckedChangeListener((b, checked) -> status.setText("Checkbox: " + checked));
-        root.addView(check, wrapWrap());
-
-        CheckBox check2 = new CheckBox(this);
-        check2.setText("Another independent checkbox");
-        root.addView(check2, wrapWrap());
-
-        RadioGroup group = new RadioGroup(this);
-        group.setOrientation(RadioGroup.VERTICAL);
-        RadioButton rb1 = new RadioButton(this); rb1.setText("Radio option A"); rb1.setId(101);
-        RadioButton rb2 = new RadioButton(this); rb2.setText("Radio option B"); rb2.setId(102);
-        RadioButton rb3 = new RadioButton(this); rb3.setText("Radio option C"); rb3.setId(103);
-        group.addView(rb1); group.addView(rb2); group.addView(rb3);
-        group.check(101);
-        group.setOnCheckedChangeListener((g, id) -> {
-            RadioButton selected = findViewById(id);
-            if (selected != null) status.setText("Selected: " + selected.getText());
-        });
-        root.addView(group, wrapWrap());
-
-        Switch switcher = new Switch(this);
-        switcher.setText("Switch widget");
-        switcher.setChecked(true);
-        switcher.setOnCheckedChangeListener((b, checked) -> status.setText("Switch: " + checked));
-        root.addView(switcher, matchWrap());
-
-        Spinner spinner = new Spinner(this);
-        String[] choices = {"Choose a value…", "Android 4.4", "Android 5.0", "Android 10", "Android 14+"};
-        spinner.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, choices) {{
-            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        }});
-        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            public void onNothingSelected(AdapterView<?> p) {}
-            public void onItemSelected(AdapterView<?> p, View v, int pos, long id) {
-                if (pos > 0) status.setText("Spinner selection: " + choices[pos]);
-            }
-        });
-        root.addView(spinner, matchWrap());
-
-        AutoCompleteTextView auto = new AutoCompleteTextView(this);
-        auto.setHint("Autocomplete (type 'And' or 'Kit')");
-        auto.setSingleLine(true);
-        auto.setThreshold(1);
-        auto.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_dropdown_item_1line,
-            new String[]{"Android", "Android 4.4 KitKat", "Android 5.0 Lollipop", "Android 14", "Checkbox", "EditText"}));
-        root.addView(auto, matchWrap());
-
-        MultiAutoCompleteTextView multi = new MultiAutoCompleteTextView(this);
-        multi.setHint("Multi-autocomplete (comma separated)");
-        multi.setTokenizer(new MultiAutoCompleteTextView.CommaTokenizer());
-        multi.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_dropdown_item_1line,
-            new String[]{"Java", "Kotlin", "Android", "Widgets", "Holo"}));
-        root.addView(multi, matchWrap());
-    }
-
-    private void progressAndRating() {
-        section("Progress, sliders and ratings");
-        final TextView seekValue = text("Seek bar value: 35");
-        root.addView(seekValue, matchWrap());
-        SeekBar seek = new SeekBar(this);
-        seek.setMax(100); seek.setProgress(35);
-        seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            public void onProgressChanged(SeekBar b, int value, boolean user) { seekValue.setText("Seek bar value: " + value); }
-            public void onStartTrackingTouch(SeekBar b) {}
-            public void onStopTrackingTouch(SeekBar b) {}
-        });
-        root.addView(seek, matchWrap());
-
-        ProgressBar horizontal = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
-        horizontal.setMax(100); horizontal.setProgress(62);
-        root.addView(horizontal, matchWrap());
-        Button progress = new Button(this);
-        progress.setText("Advance progress");
-        progress.setOnClickListener(v -> {
-            int next = (horizontal.getProgress() + 15) % 101;
-            horizontal.setProgress(next);
-            status.setText("Progress: " + next + "%");
-        });
-        root.addView(progress, matchWrap());
-
-        RatingBar rating = new RatingBar(this);
-        rating.setNumStars(5); rating.setStepSize(0.5f); rating.setRating(3.5f);
-        rating.setOnRatingBarChangeListener((b, value, user) -> status.setText("Rating: " + value + " / 5"));
-        root.addView(rating, wrapWrap());
-
-        TextView indeterminateLabel = text("Indeterminate progress indicator");
-        root.addView(indeterminateLabel, matchWrap());
-        ProgressBar spinner = new ProgressBar(this);
-        root.addView(spinner, wrapWrap());
-    }
-
-    private void dialogsAndPickers() {
-        section("Dialogs, date and time pickers");
-        addButton("Alert dialog", v -> new AlertDialog.Builder(this)
-            .setTitle("Classic alert").setMessage("This is a native Holo-style alert dialog.")
-            .setPositiveButton("OK", (d, w) -> toast("OK pressed"))
-            .setNegativeButton("Cancel", null).show());
-
-        addButton("Confirmation dialog", v -> new AlertDialog.Builder(this)
-            .setTitle("Confirm action").setMessage("Would you like to continue?")
-            .setPositiveButton("Yes", (d, w) -> status.setText("Confirmation: Yes"))
-            .setNegativeButton("No", (d, w) -> status.setText("Confirmation: No")).show());
-
-        addButton("Single-choice dialog", v -> new AlertDialog.Builder(this)
-            .setTitle("Choose one").setSingleChoiceItems(new String[]{"First", "Second", "Third"}, 0,
-                (d, which) -> { status.setText("Dialog choice: " + (which + 1)); d.dismiss(); }).setNegativeButton("Close", null).show());
-
-        addButton("Multiple-choice dialog", v -> {
-            String[] items = {"Notifications", "Sound", "Vibration"};
-            boolean[] checked = {true, false, true};
-            new AlertDialog.Builder(this).setTitle("Choose options").setMultiChoiceItems(items, checked,
-                (d, which, isChecked) -> status.setText(items[which] + ": " + isChecked))
-                .setPositiveButton("Done", null).show();
-        });
-
-        addButton("Date picker", v -> {
-            java.util.Calendar c = java.util.Calendar.getInstance();
-            new DatePickerDialog(this, (view, year, month, day) ->
-                status.setText(String.format(Locale.getDefault(), "Date: %02d/%02d/%04d", day, month + 1, year)),
-                c.get(java.util.Calendar.YEAR), c.get(java.util.Calendar.MONTH), c.get(java.util.Calendar.DAY_OF_MONTH)).show();
-        });
-        addButton("Time picker", v -> {
-            java.util.Calendar c = java.util.Calendar.getInstance();
-            new TimePickerDialog(this, (view, hour, minute) ->
-                status.setText(String.format(Locale.getDefault(), "Time: %02d:%02d", hour, minute)),
-                c.get(java.util.Calendar.HOUR_OF_DAY), c.get(java.util.Calendar.MINUTE), true).show();
-        });
-        addButton("Popup menu", v -> {
-            PopupMenu menu = new PopupMenu(this, v);
-            menu.getMenu().add("First item");
-            menu.getMenu().add("Second item");
-            menu.getMenu().add("Third item");
-            menu.setOnMenuItemClickListener(item -> { status.setText("Popup: " + item.getTitle()); return true; });
-            menu.show();
-        });
-        addButton("Context menu (long-press)", v -> toast("Long-press this button to see a context menu"));
-        Button context = new Button(this); context.setText("Long-press me");
-        registerForContextMenu(context); root.addView(context, matchWrap());
-    }
-
-    @Override public void onCreateContextMenu(android.view.ContextMenu menu, View v, android.view.ContextMenu.ContextMenuInfo info) {
-        super.onCreateContextMenu(menu, v, info);
-        menu.setHeaderTitle("Context menu");
-        menu.add("Action one"); menu.add("Action two"); menu.add("Action three");
-    }
-    @Override public boolean onContextItemSelected(android.view.MenuItem item) {
-        toast("Context: " + item.getTitle()); return true;
-    }
-
-    private void listsAndLayouts() {
-        section("Lists, grids and expandable content");
-        ListView list = new ListView(this);
-        String[] data = {"List row 1", "List row 2", "List row 3", "List row 4"};
-        list.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, data));
-        list.setLayoutParams(new LinearLayout.LayoutParams(-1, dp(180)));
-        list.setOnItemClickListener((p, v, pos, id) -> status.setText("List selected: " + data[pos]));
-        root.addView(list);
-
-        GridView grid = new GridView(this);
-        grid.setNumColumns(2);
-        grid.setVerticalSpacing(dp(4));
-        grid.setHorizontalSpacing(dp(4));
-        grid.setStretchMode(GridView.STRETCH_COLUMN_WIDTH);
-        String[] cells = {"Grid 1", "Grid 2", "Grid 3", "Grid 4", "Grid 5", "Grid 6"};
-        grid.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, cells));
-        grid.setLayoutParams(new LinearLayout.LayoutParams(-1, dp(180)));
-        grid.setOnItemClickListener((p, v, pos, id) -> status.setText("Grid selected: " + cells[pos]));
-        root.addView(grid);
-
-        final TextView expandable = text("Tap to expand this section  ▾");
-        expandable.setTextSize(16);
-        expandable.setPadding(dp(12), dp(14), dp(12), dp(14));
-        expandable.setBackground(panel());
-        final TextView details = text("Expanded content: a simple collapsible section, implemented with native views.");
-        details.setPadding(dp(12), dp(12), dp(12), dp(12));
-        details.setVisibility(View.GONE);
-        root.addView(expandable, matchWrap()); root.addView(details, matchWrap());
-        expandable.setOnClickListener(v -> {
-            boolean show = details.getVisibility() != View.VISIBLE;
-            details.setVisibility(show ? View.VISIBLE : View.GONE);
-            expandable.setText(show ? "Tap to collapse this section  ▴" : "Tap to expand this section  ▾");
-        });
-
-        HorizontalScrollView hsv = new HorizontalScrollView(this);
-        LinearLayout row = new LinearLayout(this); row.setOrientation(LinearLayout.HORIZONTAL);
-        for (int i = 1; i <= 5; i++) {
-            TextView chip = text(" Panel " + i + " ");
-            chip.setTextSize(18); chip.setPadding(dp(22), dp(24), dp(22), dp(24));
-            chip.setBackground(panel());
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
-            lp.setMargins(0, 0, dp(8), 0); row.addView(chip, lp);
-            final int n = i;
-            chip.setOnClickListener(v -> status.setText("Horizontal panel " + n));
-        }
-        hsv.addView(row); root.addView(hsv, matchWrap());
-    }
-
-    private void displayAndUtilities() {
-        section("Images, text and clipboard");
-        ImageView image = new ImageView(this);
-        image.setImageResource(android.R.drawable.ic_menu_gallery);
-        image.setContentDescription("Built-in Android gallery icon");
-        image.setBackground(panel());
-        image.setPadding(dp(18), dp(18), dp(18), dp(18));
-        image.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        root.addView(image, new LinearLayout.LayoutParams(-1, dp(110)));
-
-        TextView styled = text("Large text  •  Bold  •  Classic Android icon");
-        styled.setTextSize(18); styled.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        styled.setPadding(0, dp(10), 0, dp(10)); root.addView(styled, matchWrap());
-
-        addButton("Show Toast", v -> Toast.makeText(this, "Hello from Android 2.3 style!", Toast.LENGTH_LONG).show());
-        addButton("Copy sample text", v -> {
-            if (android.os.Build.VERSION.SDK_INT >= 11) {
-                android.content.ClipboardManager cb = (android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
-                cb.setPrimaryClip(android.content.ClipData.newPlainText("Demo text", "Copied from Android UI Showcase"));
-                toast("Text copied to clipboard");
-            } else {
-                android.text.ClipboardManager cb = (android.text.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
-                cb.setText("Copied from Android UI Showcase"); toast("Text copied to clipboard");
-            }
-        });
-        addButton("Show current date and time", v ->
-            status.setText("Device time: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date())));
-    }
-
-    private void mediaAndWeb() {
-        section("WebView and media controls");
-        TextView webNote = text("WebView can display local or web content. This demo stays offline and does not load a website.");
-        root.addView(webNote, matchWrap());
-        WebView web = new WebView(this);
-        web.loadDataWithBaseURL(null, "<html><body style='font-family:sans-serif;background:#fafafa;color:#333'><h3>Embedded WebView</h3><p>This HTML is rendered locally inside the app.</p><button onclick=\"document.getElementById('msg').innerHTML='HTML button clicked!\">Tap HTML button</button><p id='msg'></p></body></html>", "text/html", "UTF-8", null);
-        root.addView(web, new LinearLayout.LayoutParams(-1, dp(170)));
-
-        final TextView mediaStatus = text("Media demo: stopped");
-        root.addView(mediaStatus, matchWrap());
-        SeekBar fakeTrack = new SeekBar(this); fakeTrack.setMax(100); fakeTrack.setProgress(0);
-        root.addView(fakeTrack, matchWrap());
-        LinearLayout controls = new LinearLayout(this); controls.setOrientation(LinearLayout.HORIZONTAL);
-        Button play = new Button(this); play.setText("Play");
-        Button pause = new Button(this); pause.setText("Pause");
-        Button stop = new Button(this); stop.setText("Stop");
-        controls.addView(play, new LinearLayout.LayoutParams(0, -2, 1));
-        controls.addView(pause, new LinearLayout.LayoutParams(0, -2, 1));
-        controls.addView(stop, new LinearLayout.LayoutParams(0, -2, 1));
-        play.setOnClickListener(v -> mediaStatus.setText("Media demo: playing (visual demo only)"));
-        pause.setOnClickListener(v -> mediaStatus.setText("Media demo: paused"));
-        stop.setOnClickListener(v -> { mediaStatus.setText("Media demo: stopped"); fakeTrack.setProgress(0); });
-        fakeTrack.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            public void onProgressChanged(SeekBar b, int p, boolean u) { if (u) mediaStatus.setText("Demo position: " + p + "%"); }
-            public void onStartTrackingTouch(SeekBar b) {}
-            public void onStopTrackingTouch(SeekBar b) {}
-        });
-        root.addView(controls, matchWrap());
-    }
-
-    private void systemInfo() {
-        section("Device and app information");
-        root.addView(text("Android release: " + android.os.Build.VERSION.RELEASE), matchWrap());
-        root.addView(text("API level: " + android.os.Build.VERSION.SDK_INT), matchWrap());
-        root.addView(text("Manufacturer: " + android.os.Build.MANUFACTURER), matchWrap());
-        root.addView(text("Device: " + android.os.Build.DEVICE), matchWrap());
-        root.addView(text("Model: " + android.os.Build.MODEL), matchWrap());
-        root.addView(text("App minimum API: 19 (Android 4.4 KitKat)"), matchWrap());
-        root.addView(text("Theme: classic dark Android style"), matchWrap());
-        addButton("Show app information", v -> new AlertDialog.Builder(this)
-            .setTitle("About this showcase")
-            .setMessage("A widget playground inspired by Android 2.3 Gingerbread. Most controls are native Android views. Media playback and notifications are represented as demos; no data is sent anywhere.")
-            .setPositiveButton("Close", null).show());
-        TextView footer = text("Android 2.3 UI Showcase • Offline demo • No account required");
+        TextView footer = text("Offline prototype • Detection is heuristic, not a guarantee", 12, Color.DKGRAY, false);
         footer.setGravity(Gravity.CENTER);
-        footer.setPadding(0, dp(20), 0, dp(4));
-        root.addView(footer, matchWrap());
+        footer.setPadding(0, dp(18), 0, 0);
+        root.addView(footer, match());
     }
 
-    private void section(String name) {
-        sectionCount++;
-        TextView heading = new TextView(this);
-        heading.setText(name.toUpperCase(Locale.getDefault()));
-        heading.setTextSize(14);
-        heading.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        heading.setTextColor(Color.rgb(153, 220, 70));
-        heading.setPadding(0, dp(24), 0, dp(8));
-        root.addView(heading, matchWrap());
+    private void scanInstalledApps() {
+        setBusy(true);
+        overallStatus.setText("Scanning apps…");
+        detailText.setText("Checking package metadata and accessible APK hashes.");
+        progress.setIndeterminate(true);
+        worker.execute(() -> {
+            List<ScanResult> results = new ArrayList<ScanResult>();
+            int unreadable = 0;
+            try {
+                PackageManager pm = getPackageManager();
+                List<PackageInfo> packages = pm.getInstalledPackages(PackageManager.GET_PERMISSIONS);
+                for (PackageInfo info : packages) {
+                    ApplicationInfo app = info.applicationInfo;
+                    if (app == null) continue;
+                    String label;
+                    try { label = pm.getApplicationLabel(app).toString(); }
+                    catch (Exception e) { label = info.packageName; }
+                    String hash = "";
+                    try {
+                        if (app.sourceDir != null) hash = sha256(new FileInputStream(app.sourceDir));
+                    } catch (Exception ignored) { unreadable++; }
+                    ScanResult result = evaluate(info, label, hash);
+                    results.add(result);
+                }
+            } catch (Exception e) {
+                final String message = e.getMessage() == null ? "Unknown scanning error" : e.getMessage();
+                runOnUiThread(() -> {
+                    setBusy(false);
+                    progress.setIndeterminate(false);
+                    overallStatus.setText("Scan could not finish");
+                    detailText.setText(message);
+                    Toast.makeText(this, "Unable to scan installed apps", Toast.LENGTH_LONG).show();
+                });
+                return;
+            }
+            Collections.sort(results, (a, b) -> Integer.compare(b.risk, a.risk));
+            final int unreadableCount = unreadable;
+            runOnUiThread(() -> {
+                lastResults.clear();
+                lastResults.addAll(results);
+                int known = countRisk(results, 3);
+                int suspicious = countRisk(results, 1);
+                progress.setIndeterminate(false);
+                progress.setProgress(100);
+                setBusy(false);
+                countText.setText("Apps checked: " + results.size() + " • APK hashes unavailable: " + unreadableCount);
+                if (known > 0) {
+                    overallStatus.setText("Known threat signature matched");
+                    overallStatus.setTextColor(RED);
+                } else if (suspicious > 0) {
+                    overallStatus.setText("Review recommended");
+                    overallStatus.setTextColor(ORANGE);
+                } else {
+                    overallStatus.setText("Scan complete");
+                    overallStatus.setTextColor(TEAL);
+                }
+                detailText.setText(known + " known signature matches • " + suspicious
+                    + " apps with suspicious indicators. This is not a guarantee of safety.");
+                showResults();
+            });
+        });
+    }
+
+    private ScanResult evaluate(PackageInfo info, String label, String hash) {
+        ScanResult result = new ScanResult();
+        result.label = label;
+        result.packageName = info.packageName;
+        result.hash = hash;
+        result.risk = 0;
+        if (!hash.isEmpty() && KNOWN_BAD_SHA256.contains(hash.toLowerCase(Locale.US))) {
+            result.risk = 3;
+            result.reasons.add("SHA-256 matches a locally stored known-threat signature");
+            return result;
+        }
+
+        Set<String> perms = new HashSet<String>();
+        if (info.requestedPermissions != null) {
+            Collections.addAll(perms, info.requestedPermissions);
+        }
+        boolean sms = perms.contains("android.permission.SEND_SMS")
+            || perms.contains("android.permission.RECEIVE_SMS")
+            || perms.contains("android.permission.READ_SMS");
+        boolean contacts = perms.contains("android.permission.READ_CONTACTS");
+        boolean calls = perms.contains("android.permission.READ_CALL_LOG");
+        boolean install = perms.contains("android.permission.REQUEST_INSTALL_PACKAGES");
+        boolean record = perms.contains("android.permission.RECORD_AUDIO");
+        boolean internet = perms.contains("android.permission.INTERNET");
+
+        if (sms && contacts) {
+            result.risk++;
+            result.reasons.add("Requests both SMS and contacts access");
+        }
+        if (sms && install) {
+            result.risk++;
+            result.reasons.add("Requests SMS access and permission to request app installs");
+        }
+        if (calls && contacts && internet) {
+            result.risk++;
+            result.reasons.add("Requests call-log, contacts, and internet access");
+        }
+        if (install) {
+            result.risk++;
+            result.reasons.add("Can request installation of other apps");
+        }
+        if (record && internet && contacts && result.risk == 0) {
+            result.risk++;
+            result.reasons.add("Requests microphone, contacts, and internet access");
+        }
+        if (result.risk >= 2) result.risk = 2;
+        return result;
+    }
+
+    private int countRisk(List<ScanResult> results, int threshold) {
+        int count = 0;
+        for (ScanResult r : results) if (r.risk >= threshold) count++;
+        return count;
+    }
+
+    private void pickApk() {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("application/vnd.android.package-archive");
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        try { startActivityForResult(Intent.createChooser(intent, "Select an APK file"), REQUEST_PICK_APK); }
+        catch (Exception e) { Toast.makeText(this, "No file picker is available", Toast.LENGTH_LONG).show(); }
+    }
+
+    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != REQUEST_PICK_APK || resultCode != RESULT_OK || data == null) return;
+        Uri uri = data.getData();
+        if (uri == null) return;
+        setBusy(true);
+        overallStatus.setText("Checking selected file…");
+        progress.setIndeterminate(true);
+        worker.execute(() -> {
+            String hash = "";
+            String error = null;
+            try {
+                InputStream in = getContentResolver().openInputStream(uri);
+                if (in == null) throw new Exception("Could not open selected file.");
+                hash = sha256(in);
+            } catch (Exception e) {
+                error = e.getMessage() == null ? "Unable to read file" : e.getMessage();
+            }
+            final String finalHash = hash;
+            final String finalError = error;
+            runOnUiThread(() -> {
+                setBusy(false);
+                progress.setIndeterminate(false);
+                if (finalError != null) {
+                    overallStatus.setText("File could not be checked");
+                    detailText.setText(finalError);
+                } else if (KNOWN_BAD_SHA256.contains(finalHash.toLowerCase(Locale.US))) {
+                    overallStatus.setText("Known threat signature matched");
+                    overallStatus.setTextColor(RED);
+                    detailText.setText("SHA-256: " + finalHash);
+                    new AlertDialog.Builder(this).setTitle("Known threat signature matched")
+                        .setMessage("The selected file's SHA-256 hash matches a local signature. Do not install it.")
+                        .setPositiveButton("OK", null).show();
+                } else {
+                    overallStatus.setText("No local signature match");
+                    overallStatus.setTextColor(ORANGE);
+                    detailText.setText("SHA-256: " + finalHash + "\nThe local signature list currently contains no bundled threat samples. A hash miss does not mean the APK is safe.");
+                    new AlertDialog.Builder(this).setTitle("No signature match")
+                        .setMessage("SHA-256:\n" + finalHash + "\n\nNo matching signature was found in the local database. This first version hashes the file but does not yet parse or fully analyze APK contents.")
+                        .setPositiveButton("OK", null).show();
+                }
+            });
+        });
+    }
+
+    private String sha256(InputStream input) throws Exception {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = input.read(buffer)) != -1) digest.update(buffer, 0, read);
+            StringBuilder out = new StringBuilder();
+            for (byte b : digest.digest()) out.append(String.format(Locale.US, "%02x", b & 0xff));
+            return out.toString();
+        } finally {
+            input.close();
+        }
+    }
+
+    private void showResults() {
+        if (lastResults.isEmpty()) {
+            new AlertDialog.Builder(this).setTitle("Scan results")
+                .setMessage("No installed-app scan results yet. Tap SCAN INSTALLED APPS to begin.")
+                .setPositiveButton("OK", null).show();
+            return;
+        }
+        StringBuilder summary = new StringBuilder();
+        for (ScanResult r : lastResults) {
+            summary.append(r.risk >= 3 ? "[KNOWN THREAT]" : r.risk >= 1 ? "[REVIEW]" : "[NO INDICATORS]")
+                .append(" ").append(r.label).append("\n")
+                .append(r.packageName).append("\n");
+            if (r.reasons.isEmpty()) summary.append("No configured heuristic matched; this does not prove the app is safe.\n");
+            else for (String reason : r.reasons) summary.append(" • ").append(reason).append("\n");
+            if (!r.hash.isEmpty()) summary.append("SHA-256: ").append(r.hash).append("\n");
+            summary.append("\n");
+        }
+        ScrollView scroller = new ScrollView(this);
+        TextView body = text(summary.toString(), 13, INK, false);
+        body.setPadding(dp(12), dp(8), dp(12), dp(8));
+        scroller.addView(body);
+        new AlertDialog.Builder(this).setTitle("Latest scan results (" + lastResults.size() + ")")
+            .setView(scroller).setPositiveButton("Close", null).show();
+    }
+
+    private void showAboutDetection() {
+        new AlertDialog.Builder(this).setTitle("What is checked?")
+            .setMessage("• Installed app package names and requested permissions\n• SHA-256 hashes of readable installed APK files\n• Hashes compared with a local known-threat list\n• A few combinations of sensitive permissions\n\nThe bundled threat-signature list starts empty. Permission combinations are only clues, not proof of malware. This app does not upload any information.")
+            .setPositiveButton("OK", null).show();
+    }
+
+    private void setBusy(boolean busy) {
+        scanButton.setEnabled(!busy);
+        apkButton.setEnabled(!busy);
+        scanButton.setText(busy ? "SCANNING…" : "SCAN INSTALLED APPS");
+    }
+
+    private void addSection(String name) {
+        TextView heading = text(name, 14, TEAL, true);
+        heading.setPadding(0, dp(22), 0, dp(8));
+        root.addView(heading, match());
         View line = new View(this);
-        line.setBackgroundColor(Color.rgb(65, 65, 65));
+        line.setBackgroundColor(Color.rgb(190, 190, 190));
         root.addView(line, new LinearLayout.LayoutParams(-1, dp(1)));
     }
 
     private void addButton(String label, View.OnClickListener listener) {
-        Button b = new Button(this); b.setText(label); b.setOnClickListener(listener); root.addView(b, matchWrap());
+        Button b = button(label);
+        b.setOnClickListener(listener);
+        root.addView(b, match());
     }
-    private TextView text(String value) {
-        TextView t = new TextView(this); t.setText(value); t.setTextColor(Color.rgb(230, 230, 230)); t.setTextSize(15); t.setPadding(0, dp(5), 0, dp(5)); return t;
+
+    private Button button(String label) {
+        Button b = new Button(this);
+        b.setText(label);
+        b.setTextSize(14);
+        b.setTextColor(TEAL);
+        b.setAllCaps(false);
+        return b;
     }
-    private void toast(String value) { Toast.makeText(this, value, Toast.LENGTH_SHORT).show(); }
-    private int dp(float value) { return (int)(value * getResources().getDisplayMetrics().density + 0.5f); }
-    private LinearLayout.LayoutParams matchWrap() { return new LinearLayout.LayoutParams(-1, -2); }
-    private LinearLayout.LayoutParams wrapWrap() { return new LinearLayout.LayoutParams(-2, -2); }
-    private GradientDrawable panel() {
+
+    private TextView text(String value, float size, int color, boolean bold) {
+        TextView t = new TextView(this);
+        t.setText(value);
+        t.setTextSize(size);
+        t.setTextColor(color);
+        if (bold) t.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        return t;
+    }
+
+    private GradientDrawable panel(int color, int stroke) {
         GradientDrawable d = new GradientDrawable();
-        d.setColor(Color.rgb(35,35,35)); d.setStroke(dp(1), Color.rgb(80,80,80)); d.setCornerRadius(dp(2)); return d;
+        d.setColor(color);
+        d.setCornerRadius(dp(2));
+        d.setStroke(dp(1), stroke);
+        return d;
+    }
+
+    private int dp(float value) { return (int)(value * getResources().getDisplayMetrics().density + 0.5f); }
+    private LinearLayout.LayoutParams match() { return new LinearLayout.LayoutParams(-1, -2); }
+
+    private static class ScanResult {
+        String label;
+        String packageName;
+        String hash;
+        int risk;
+        final List<String> reasons = new ArrayList<String>();
+    }
+
+    @Override protected void onDestroy() {
+        worker.shutdownNow();
+        super.onDestroy();
     }
 }
