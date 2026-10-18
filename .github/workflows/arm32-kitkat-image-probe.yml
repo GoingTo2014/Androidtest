@@ -38,8 +38,9 @@ jobs:
           set -euxo pipefail
           URL="https://dl.google.com/android/repository/sys-img/google_apis/armeabi-v7a-19_r40.zip"
           ZIP="$RUNNER_TEMP/armeabi-v7a-19_r40.zip"
+          UNPACK="$RUNNER_TEMP/arm32-image-unpack"
           DEST="$ANDROID_HOME/system-images/android-19/google_apis/armeabi-v7a"
-          mkdir -p "$DEST" "$RUNNER_TEMP/arm32-image-probe"
+          mkdir -p "$UNPACK" "$RUNNER_TEMP/arm32-image-probe"
           curl --fail --location --retry 3 --retry-all-errors "$URL" --output "$ZIP"
           echo "Downloaded package:"
           ls -lh "$ZIP"
@@ -47,9 +48,20 @@ jobs:
           echo >> "$GITHUB_WORKSPACE/arm32-image-report.txt"
           echo "=== ZIP CONTENTS ===" | tee -a "$GITHUB_WORKSPACE/arm32-image-report.txt"
           unzip -l "$ZIP" | tee -a "$GITHUB_WORKSPACE/arm32-image-report.txt"
-          unzip -oq "$ZIP" -d "$DEST"
+          unzip -oq "$ZIP" -d "$UNPACK"
+          PROP="$(find "$UNPACK" -type f -name source.properties -print -quit)"
+          if [ -n "$PROP" ]; then
+            PACKAGE_ROOT="$(dirname "$PROP")"
+          else
+            PACKAGE_ROOT="$UNPACK"
+          fi
+          rm -rf "$DEST"
+          mkdir -p "$DEST"
+          cp -a "$PACKAGE_ROOT"/. "$DEST"/
           echo "=== EXTRACTED FILES ===" | tee -a "$GITHUB_WORKSPACE/arm32-image-report.txt"
-          find "$DEST" -maxdepth 3 -type f -printf '%P (%s bytes)\n' | sort | tee -a "$GITHUB_WORKSPACE/arm32-image-report.txt"
+          find "$DEST" -maxdepth 2 -type f -printf '%P (%s bytes)\n' | sort | tee -a "$GITHUB_WORKSPACE/arm32-image-report.txt"
+          echo "=== DISK SPACE USE ===" | tee -a "$GITHUB_WORKSPACE/arm32-image-report.txt"
+          du -sh "$DEST" "$DEST/system.img" "$DEST/userdata.img" 2>/dev/null | tee -a "$GITHUB_WORKSPACE/arm32-image-report.txt" || true
           echo "=== SOURCE PROPERTIES ===" | tee -a "$GITHUB_WORKSPACE/arm32-image-report.txt"
           if test -f "$DEST/source.properties"; then
             cat "$DEST/source.properties" | tee -a "$GITHUB_WORKSPACE/arm32-image-report.txt"
@@ -57,7 +69,7 @@ jobs:
             echo "No source.properties at package root" | tee -a "$GITHUB_WORKSPACE/arm32-image-report.txt"
           fi
           echo "=== KERNEL CANDIDATES ===" | tee -a "$GITHUB_WORKSPACE/arm32-image-report.txt"
-          find "$DEST" -maxdepth 3 -type f \( -iname 'kernel*' -o -iname '*ramdisk*' -o -iname 'system.img' \) -print | tee -a "$GITHUB_WORKSPACE/arm32-image-report.txt"
+          find "$DEST" -maxdepth 2 -type f \( -iname 'kernel*' -o -iname '*ramdisk*' -o -iname 'system.img' \) -print | tee -a "$GITHUB_WORKSPACE/arm32-image-report.txt"
           while IFS= read -r f; do
             [ -f "$f" ] || continue
             echo "--- $f" | tee -a "$GITHUB_WORKSPACE/arm32-image-report.txt"
@@ -65,7 +77,7 @@ jobs:
             if [[ "$(basename "$f")" == kernel* ]]; then
               strings "$f" | grep -m 8 -E 'Linux version|goldfish|Android' | tee -a "$GITHUB_WORKSPACE/arm32-image-report.txt" || true
             fi
-          done < <(find "$DEST" -maxdepth 3 -type f \( -iname 'kernel*' -o -iname '*ramdisk*' -o -iname 'system.img' \))
+          done < <(find "$DEST" -maxdepth 2 -type f \( -iname 'kernel*' -o -iname '*ramdisk*' -o -iname 'system.img' \))
           test -s "$DEST/system.img"
           echo "IMAGE_INSPECTION_OK=true" | tee -a "$GITHUB_WORKSPACE/arm32-image-report.txt"
 
