@@ -80,9 +80,8 @@ jobs:
 
       - name: Build optimized ARM64 QEMU native libraries (KVM disabled)
         working-directory: ${{ runner.temp }}/limbo/limbo-android-lib/src/main/jni
-        env:
-          NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/23.1.7779620
         run: |
+          NDK_ROOT="$ANDROID_HOME/ndk/23.1.7779620"
           make limbo \
             NDK_ROOT="$NDK_ROOT" \
             NDK_ENV=linux-x86_64 \
