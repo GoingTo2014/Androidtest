@@ -1,23 +1,21 @@
 # KitKat Antivirus
 
-An offline Android security prototype with a classic Android 4.x Holo-style interface. Built with Java and native Android APIs, minimum Android 4.4 (API 19), and designed to install on modern Android versions.
+An offline Android utility with a classic Android 4.x Holo-style interface. Built with Java and native Android APIs, minimum Android 4.4 (API 19), and designed to install on modern Android versions.
 
 ## Current features
 
 - Native classic Android interface.
-- Scans installed packages visible to the app.
-- Reviews a small set of sensitive permission combinations and labels them as review indicators, not proof of malware.
-- Calculates SHA-256 hashes for readable installed APK files.
-- Lets the user select an APK file and calculates its SHA-256 hash offline.
-- Compares hashes with a local known-threat signature set.
+- Lets the user choose one APK file through Android's file picker.
+- Calculates the selected file's SHA-256 hash locally.
+- No installed-app enumeration or inspection of other apps' permissions.
 - No INTERNET permission, account, analytics, or network calls.
 - GitHub Actions builds a debug APK only when manually triggered.
 
-## Important detection limitations
+## Important limitations
 
-This is an early prototype, not a replacement for Google Play Protect or a production antivirus. The bundled known-threat hash list is intentionally empty until verified signatures are added. A hash that does not match a local signature is not proof that a file is safe. Permission heuristics can produce false positives and miss malware. The APK-file flow currently hashes the selected file but does not yet fully parse or statically analyze its contents.
+This test build is an offline APK hash utility, not a malware scanner and not a replacement for Google Play Protect. It does not compare hashes against a malware database or determine whether an APK is safe. A hash is only an identifier for file contents.
 
-Android limits app visibility and access to other apps' files depending on OS version, target SDK, and device policy. Some APK paths may not be readable. The app cannot silently uninstall other apps or scan every private app data directory.
+The app does not request broad package visibility and does not scan installed apps. Android may still show warnings based on the APK's signing identity, reputation, target SDK, or other signals. Removing package scanning cannot guarantee that Play Protect will stop warning about the app.
 
 ## Build with GitHub Actions
 
