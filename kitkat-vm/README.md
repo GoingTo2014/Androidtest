@@ -6,7 +6,7 @@ This folder documents the Android 4.4 VM build. The APK is built from the open-s
 
 - Targets modern **ARM64 Android tablets**, including Android 14 and newer. The upstream app's minimum SDK is 21; the build keeps its legacy target SDK to avoid introducing unrelated Android 14 behavior changes into this older codebase.
 - **No root is needed or used.** KVM is disabled both when QEMU is compiled and in the Android activity, so the app does not try to use `/dev/kvm`.
-- The VM is real PC emulation, not a simulated KitKat screen. Users must download an Android-x86 4.4-r4 ISO themselves; it is not bundled in this APK.
+- The VM is real PC emulation, not a simulated KitKat screen. The app can download the official Android-x86 4.4-r4 ISO in-app; the ISO itself is not bundled in the APK.
 - CPU count is configurable in the VM interface, capped at 4 virtual CPUs to help avoid accidental over-allocation. RAM, virtual disk, display, networking, and other machine options are configurable there too.
 - The workflow builds only the ARM64 host APK to reduce package size and gives it a unique package ID so it can coexist with the existing demo or a Limbo install. It is intended for ARM64 tablets, not Android-x86 phones/tablets.
 
@@ -45,5 +45,5 @@ In the emulator, create a VM using the x86_64 machine, attach the ISO as its CD-
 ## Engine and licensing
 
 - Emulator engine: [Limbo (QEMU for Android)](https://github.com/limboemu/limbo), built from pinned upstream source.
-- Guest OS: [Android-x86 4.4-r4](https://www.android-x86.org/releases/releasenote-4-4-r4.html), downloaded separately by the user.
+- Guest OS: [Android-x86 4.4-r4](https://www.android-x86.org/releases/releasenote-4-4-r4.html), offered through the in-app ISO downloader.
 - Limbo and QEMU have their own license and redistribution requirements. Review the upstream `COPYING` file before redistributing modified builds.
