@@ -88,10 +88,13 @@ jobs:
             --disable-libnfs \
             --disable-libiscsi \
             --disable-glusterfs
-          make -j2 qemu-system-arm
-          ./qemu-system-arm --version | tee "$GITHUB_WORKSPACE/qemu2-arm32-report.txt"
-          ./qemu-system-arm -machine help | tee -a "$GITHUB_WORKSPACE/qemu2-arm32-report.txt"
-          if ./qemu-system-arm -machine help | grep -q '^ranchu '; then
+          make -j2
+          QEMU_BIN="$(find "$PWD" -type f -name qemu-system-arm -print -quit)"
+          test -n "$QEMU_BIN"
+          echo "QEMU_BIN_RELATIVE=$QEMU_BIN" | tee "$GITHUB_WORKSPACE/qemu2-arm32-report.txt"
+          "$QEMU_BIN" --version | tee -a "$GITHUB_WORKSPACE/qemu2-arm32-report.txt"
+          "$QEMU_BIN" -machine help | tee -a "$GITHUB_WORKSPACE/qemu2-arm32-report.txt"
+          if "$QEMU_BIN" -machine help | grep -q '^ranchu '; then
             echo "RANCHU_MACHINE_PRESENT=true" | tee -a "$GITHUB_WORKSPACE/qemu2-arm32-report.txt"
           else
             echo "RANCHU_MACHINE_PRESENT=false" | tee -a "$GITHUB_WORKSPACE/qemu2-arm32-report.txt"
@@ -129,7 +132,8 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
-          QEMU="$RUNNER_TEMP/qemu-android/build-arm32/qemu-system-arm"
+          QEMU="$(find "$RUNNER_TEMP/qemu-android/build-arm32" -type f -name qemu-system-arm -print -quit)"
+          test -n "$QEMU"
           GUEST="$RUNNER_TEMP/kitkat-arm"
           LOG="$GITHUB_WORKSPACE/qemu2-arm32-boot.log"
           REPORT="$GITHUB_WORKSPACE/qemu2-arm32-report.txt"
