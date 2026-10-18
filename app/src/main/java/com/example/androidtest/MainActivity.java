@@ -62,8 +62,10 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
-        getWindow().setStatusBarColor(Color.rgb(0, 121, 107));
-        getWindow().setNavigationBarColor(Color.rgb(0, 77, 64));
+        if (android.os.Build.VERSION.SDK_INT >= 21) {
+            getWindow().setStatusBarColor(Color.rgb(0, 121, 107));
+            getWindow().setNavigationBarColor(Color.rgb(0, 77, 64));
+        }
         getWindow().setTitle("KitKat Antivirus");
         buildInterface();
     }
