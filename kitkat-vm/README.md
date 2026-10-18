@@ -20,6 +20,8 @@ The first build uses upstream Limbo's existing VM configuration interface rather
 
 ## Build an APK from your tablet
 
+First merge the pull request into the repository's default branch (`main`); GitHub only exposes the manual workflow trigger from the default branch. Then:
+
 1. Open the repository's **Actions** tab.
 2. Select **Build KitKat VM (ARM64)** and choose **Run workflow**.
 3. Wait for the workflow to finish.
