@@ -30,7 +30,6 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          yes | sdkmanager --licenses
           sdkmanager --install "emulator" "platform-tools" "cmdline-tools;latest"
 
       - name: Download and inspect the official KitKat ARM32 system image
