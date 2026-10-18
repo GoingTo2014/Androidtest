@@ -114,7 +114,7 @@ jobs:
             -memory 768 \
             -port 5554 \
             -no-window -no-audio -no-boot-anim -no-snapshot \
-            -gpu off -verbose > "$LOG" 2>&1 &
+            -gpu off -verbose -show-kernel > "$LOG" 2>&1 &
           EMU_PID=$!
           BOOT_OK=false
           for i in $(seq 1 240); do
