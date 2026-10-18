@@ -1,0 +1,147 @@
+name: ARM32 KitKat legacy-engine boot test
+
+on:
+  push:
+    branches:
+      - poc/native-arm32-kitkat
+
+permissions:
+  contents: read
+
+concurrency:
+  group: arm32-kitkat-legacy-test
+  cancel-in-progress: false
+
+jobs:
+  boot-test:
+    name: Boot official API 19 ARM32 image with legacy Goldfish emulator
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - name: Install only runtime libraries needed by the old emulator
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y \
+            curl unzip file binutils adb e2fsprogs \
+            libpulse0 libnss3 libx11-6 libxext6 libxrender1 libxi6 \
+            libxrandr2 libxfixes3 libxcursor1 libxinerama1 libxkbcommon0 \
+            libasound2 libgl1 libstdc++6
+
+      - name: Download legacy Google emulator tools
+        shell: bash
+        run: |
+          set -euxo pipefail
+          TOOLS_ZIP="$RUNNER_TEMP/tools_r25.2.5-linux.zip"
+          TOOLS_DIR="$RUNNER_TEMP/android-tools"
+          curl --fail --location --retry 3 --retry-all-errors \
+            https://dl.google.com/android/repository/tools_r25.2.5-linux.zip \
+            --output "$TOOLS_ZIP"
+          echo "Legacy SDK archive:" 
+          ls -lh "$TOOLS_ZIP"
+          echo "72df3aa1988c0a9003ccdfd7a13a7b8bd0f47fc1  $TOOLS_ZIP" | sha1sum -c -
+          mkdir -p "$TOOLS_DIR"
+          unzip -q "$TOOLS_ZIP" -d "$TOOLS_DIR"
+          test -x "$TOOLS_DIR/tools/emulator64-arm"
+          "$TOOLS_DIR/tools/emulator64-arm" -version || true
+          echo "LEGACY_EMULATOR_PRESENT=true"
+
+      - name: Download only the KitKat ARM system files
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ZIP="$RUNNER_TEMP/armeabi-v7a-19_r40.zip"
+          UNPACK="$RUNNER_TEMP/arm-image"
+          DEST="$RUNNER_TEMP/kitkat-arm"
+          curl --fail --location --retry 3 --retry-all-errors \
+            https://dl.google.com/android/repository/sys-img/google_apis/armeabi-v7a-19_r40.zip \
+            --output "$ZIP"
+          mkdir -p "$UNPACK" "$DEST"
+          unzip -oq "$ZIP" -d "$UNPACK"
+          rm -f "$ZIP"
+          ROOT="$(dirname "$(find "$UNPACK" -type f -name system.img -print -quit)")"
+          test -s "$ROOT/kernel-qemu"
+          test -s "$ROOT/ramdisk.img"
+          test -s "$ROOT/system.img"
+          cp "$ROOT/kernel-qemu" "$DEST/kernel-qemu"
+          cp "$ROOT/ramdisk.img" "$DEST/ramdisk.img"
+          cp "$ROOT/system.img" "$DEST/system.img"
+          cp "$ROOT/build.prop" "$DEST/build.prop"
+          echo "Image components copied (the 2 GiB userdata template was deliberately excluded):"
+          du -h "$DEST"/*
+          echo "KITKAT_IMAGE_COMPONENTS_OK=true"
+
+      - name: Create a compact 384 MiB userdata disk
+        shell: bash
+        run: |
+          set -euxo pipefail
+          DATA="$RUNNER_TEMP/kitkat-arm/userdata.img"
+          truncate -s 384M "$DATA"
+          mke2fs -q -t ext4 -F "$DATA"
+          ls -lh "$DATA"
+          echo "USERDATA_MAX=384MiB" 
+
+      - name: Attempt software-only ARM32 KitKat boot
+        shell: bash
+        run: |
+          set -uo pipefail
+          TOOLS_DIR="$RUNNER_TEMP/android-tools/tools"
+          IMAGE_DIR="$RUNNER_TEMP/kitkat-arm"
+          LOG="$GITHUB_WORKSPACE/arm32-legacy-emulator.log"
+          REPORT="$GITHUB_WORKSPACE/arm32-legacy-report.txt"
+          export LD_LIBRARY_PATH="$TOOLS_DIR/lib64:$TOOLS_DIR/lib:$TOOLS_DIR"
+          echo "Legacy engine:" > "$REPORT"
+          file "$TOOLS_DIR/emulator64-arm" | tee -a "$REPORT"
+          echo "Disk usage:" | tee -a "$REPORT"
+          du -sh "$IMAGE_DIR" | tee -a "$REPORT"
+          "$TOOLS_DIR/emulator64-arm" \
+            -kernel "$IMAGE_DIR/kernel-qemu" \
+            -system "$IMAGE_DIR/system.img" \
+            -ramdisk "$IMAGE_DIR/ramdisk.img" \
+            -data "$IMAGE_DIR/userdata.img" \
+            -cache "$RUNNER_TEMP/kitkat-cache.img" \
+            -partition-size 384 \
+            -memory 768 \
+            -port 5554 \
+            -no-window -no-audio -no-boot-anim -no-snapshot \
+            -gpu off -verbose > "$LOG" 2>&1 &
+          EMU_PID=$!
+          BOOT_OK=false
+          for i in $(seq 1 240); do
+            if adb -e shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' | grep -q '^1$'; then
+              BOOT_OK=true
+              break
+            fi
+            if ! kill -0 "$EMU_PID" 2>/dev/null; then
+              echo "Legacy emulator exited before the guest finished booting." | tee -a "$REPORT"
+              break
+            fi
+            sleep 1
+          done
+          echo "BOOT_OK=$BOOT_OK" | tee -a "$REPORT"
+          adb devices -l | tee -a "$REPORT" || true
+          if [ "$BOOT_OK" = true ]; then
+            adb -e shell getprop ro.build.version.release | tee -a "$REPORT"
+            adb -e shell getprop ro.product.cpu.abi | tee -a "$REPORT"
+            adb -e shell screencap -p /sdcard/kitkat-arm32.png || true
+            adb -e pull /sdcard/kitkat-arm32.png "$GITHUB_WORKSPACE/kitkat-arm32.png" || true
+          fi
+          tail -n 180 "$LOG" | tee -a "$REPORT" || true
+          kill "$EMU_PID" 2>/dev/null || true
+          wait "$EMU_PID" 2>/dev/null || true
+          if [ "$BOOT_OK" != true ]; then
+            exit 1
+          fi
+
+      - name: Upload compact boot diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arm32-kitkat-boot-diagnostics
+          path: |
+            arm32-legacy-report.txt
+            arm32-legacy-emulator.log
+            kitkat-arm32.png
+          if-no-files-found: warn
+          retention-days: 7
