@@ -1,9 +1,7 @@
 name: Temporary ARM32 KitKat image probe
 
 on:
-  push:
-    branches:
-      - poc/arm32-kitkat-image-check
+  workflow_dispatch:
 
 permissions:
   contents: read
