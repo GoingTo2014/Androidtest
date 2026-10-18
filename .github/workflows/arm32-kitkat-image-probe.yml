@@ -106,6 +106,7 @@ jobs:
           set -uo pipefail
           LOG="$GITHUB_WORKSPACE/kitkat-arm32-emulator.log"
           "$ANDROID_HOME/emulator/emulator" \
+            -engine classic \
             -avd kitkat-arm32-poc \
             -no-window -no-audio -no-boot-anim -no-snapshot \
             -accel off -gpu off -verbose > "$LOG" 2>&1 &
